@@ -13,7 +13,7 @@ FIREBASE_PROJECT_ID = "todos-c1b87"
 ENVIRONMENT = "development"
 
 [env.production]
-vars = { ENVIRONMENT = "production" }
+vars = { FIREBASE_PROJECT_ID = "todos-c1b87", ENVIRONMENT = "production" }
 
 [env.production.d1_databases]
 binding = "DB"
