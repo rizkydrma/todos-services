@@ -1,0 +1,32 @@
+{
+  "name": "todo-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/index.ts",
+    "deploy": "wrangler deploy src/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 execute todo-db --local --file=./drizzle/migrations.sql",
+    "db:migrate:prod": "wrangler d1 execute todo-db --remote --file=./drizzle/migrations.sql",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.38.3",
+    "hono": "^4.6.14",
+    "uuid": "^10.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "@hono/zod-openapi": "^0.18.3",
+    "@scalar/hono-api-reference": "^0.5.172",
+    "@types/node": "^26.1.1",
+    "@types/uuid": "^10.0.0",
+    "drizzle-kit": "^0.30.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.111.0"
+  }
+}
