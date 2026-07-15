@@ -28,17 +28,21 @@ export class D1TagRepository implements ITagRepository {
 
   async create(data: CreateTagInput): Promise<Tag> {
     const now = new Date().toISOString();
-    const result = await this.db.insert(tags).values({
-      ...data,
-      createdAt: now,
-      updatedAt: now,
-    }).returning();
+    const result = await this.db
+      .insert(tags)
+      .values({
+        ...data,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
     return result[0];
   }
 
   async update(id: string, data: UpdateTagInput): Promise<Tag> {
     const now = new Date().toISOString();
-    const result = await this.db.update(tags)
+    const result = await this.db
+      .update(tags)
       .set({ ...data, updatedAt: now })
       .where(eq(tags.id, id))
       .returning();

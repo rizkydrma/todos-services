@@ -1,11 +1,5 @@
 export type AppErrorCode =
-  | 'VALIDATION_ERROR'
-  | 'UNAUTHORIZED'
-  | 'FORBIDDEN'
-  | 'NOT_FOUND'
-  | 'CONFLICT'
-  | 'TOO_MANY_REQUESTS'
-  | 'INTERNAL_ERROR';
+  'VALIDATION_ERROR' | 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' | 'CONFLICT' | 'TOO_MANY_REQUESTS' | 'INTERNAL_ERROR';
 
 const statusMap: Record<AppErrorCode, number> = {
   VALIDATION_ERROR: 400,

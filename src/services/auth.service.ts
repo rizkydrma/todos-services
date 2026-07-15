@@ -6,11 +6,7 @@ import type { User } from '../types';
 export class AuthService {
   constructor(private userRepo: IUserRepository) {}
 
-  async register(tokenPayload: {
-    firebaseUid: string;
-    email: string;
-    name: string;
-  }): Promise<User> {
+  async register(tokenPayload: { firebaseUid: string; email: string; name: string }): Promise<User> {
     const existing = await this.userRepo.findByFirebaseUid(tokenPayload.firebaseUid);
     if (existing) {
       throw AppError.conflict('User already registered');
@@ -33,10 +29,13 @@ export class AuthService {
     return user;
   }
 
-  async getProfile(userId: string, tokenPayload: {
-    email: string;
-    name: string;
-  }): Promise<User> {
+  async getProfile(
+    userId: string,
+    tokenPayload: {
+      email: string;
+      name: string;
+    },
+  ): Promise<User> {
     const user = await this.userRepo.findById(userId);
     if (!user) {
       throw AppError.notFound('User');

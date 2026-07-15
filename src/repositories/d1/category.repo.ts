@@ -23,17 +23,21 @@ export class D1CategoryRepository implements ICategoryRepository {
 
   async create(data: CreateCategoryInput): Promise<Category> {
     const now = new Date().toISOString();
-    const result = await this.db.insert(categories).values({
-      ...data,
-      createdAt: now,
-      updatedAt: now,
-    }).returning();
+    const result = await this.db
+      .insert(categories)
+      .values({
+        ...data,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
     return result[0];
   }
 
   async update(id: string, data: UpdateCategoryInput): Promise<Category> {
     const now = new Date().toISOString();
-    const result = await this.db.update(categories)
+    const result = await this.db
+      .update(categories)
       .set({ ...data, updatedAt: now })
       .where(eq(categories.id, id))
       .returning();

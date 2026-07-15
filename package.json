@@ -10,7 +10,19 @@
     "db:migrate:local": "wrangler d1 execute todo-db --local --file=./drizzle/migrations.sql",
     "db:migrate:prod": "wrangler d1 execute todo-db --remote --file=./drizzle/migrations.sql",
     "db:seed": "tsx src/db/seed.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "lint": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' --fix",
+    "format": "prettier --write 'src/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts'",
+    "check": "tsc --noEmit && prettier --check 'src/**/*.ts' && eslint 'src/**/*.ts'",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "drizzle-orm": "^0.38.3",
@@ -21,13 +33,22 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
+    "@eslint/js": "^9.37.0",
     "@hono/zod-openapi": "^0.18.3",
     "@scalar/hono-api-reference": "^0.5.172",
     "@types/node": "^26.1.1",
     "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
     "drizzle-kit": "^0.30.2",
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.2",
+    "prettier": "^3.6.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
+    "typescript-eslint": "^8.47.0",
     "wrangler": "^4.111.0"
   }
 }

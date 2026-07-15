@@ -13,11 +13,7 @@ import type { DbClient } from '../db';
 const todosRoutes = new Hono<{ Bindings: { DB: D1Database } }>();
 
 function createService(db: DbClient) {
-  return new TodoService(
-    new D1TodoRepository(db),
-    new D1CategoryRepository(db),
-    new D1TagRepository(db),
-  );
+  return new TodoService(new D1TodoRepository(db), new D1CategoryRepository(db), new D1TagRepository(db));
 }
 
 todosRoutes.get('/', authMiddleware, zValidator('query', todoQuerySchema), async (c) => {

@@ -1,5 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { ICategoryRepository, CreateCategoryInput, UpdateCategoryInput } from '../repositories/interfaces/category.repo';
+import type {
+  ICategoryRepository,
+  CreateCategoryInput,
+  UpdateCategoryInput,
+} from '../repositories/interfaces/category.repo';
 import { AppError } from '../lib/errors';
 import type { Category } from '../types';
 

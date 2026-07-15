@@ -48,7 +48,11 @@ const openApiSpec = {
         security: [],
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { type: 'object', properties: { token: { type: 'string' } }, required: ['token'] } } },
+          content: {
+            'application/json': {
+              schema: { type: 'object', properties: { token: { type: 'string' } }, required: ['token'] },
+            },
+          },
         },
         responses: { '201': { description: 'User registered' }, '409': { description: 'Already exists' } },
       },
@@ -60,13 +64,22 @@ const openApiSpec = {
         security: [],
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { type: 'object', properties: { token: { type: 'string' } }, required: ['token'] } } },
+          content: {
+            'application/json': {
+              schema: { type: 'object', properties: { token: { type: 'string' } }, required: ['token'] },
+            },
+          },
         },
         responses: { '200': { description: 'User profile' }, '401': { description: 'Not registered' } },
       },
     },
     '/auth/me': {
-      get: { tags: ['Auth'], summary: 'Current user', security: [{ bearerAuth: [] }], responses: { '200': { description: 'Profile' } } },
+      get: {
+        tags: ['Auth'],
+        summary: 'Current user',
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'Profile' } },
+      },
     },
     '/todos': {
       get: {
@@ -86,84 +99,140 @@ const openApiSpec = {
         responses: { '200': { description: 'Paginated todos' } },
       },
       post: {
-        tags: ['Todos'], summary: 'Create todo', security: [{ bearerAuth: [] }],
+        tags: ['Todos'],
+        summary: 'Create todo',
+        security: [{ bearerAuth: [] }],
         responses: { '201': { description: 'Created' } },
       },
     },
     '/todos/{id}': {
       get: {
-        tags: ['Todos'], summary: 'Get todo', security: [{ bearerAuth: [] }],
+        tags: ['Todos'],
+        summary: 'Get todo',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Detail' }, '404': { description: 'Not found' } },
       },
       patch: {
-        tags: ['Todos'], summary: 'Update todo', security: [{ bearerAuth: [] }],
+        tags: ['Todos'],
+        summary: 'Update todo',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Updated' } },
       },
       delete: {
-        tags: ['Todos'], summary: 'Delete todo', security: [{ bearerAuth: [] }],
+        tags: ['Todos'],
+        summary: 'Delete todo',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Deleted' } },
       },
     },
     '/todos/batch': {
       patch: {
-        tags: ['Todos'], summary: 'Batch operations', security: [{ bearerAuth: [] }],
+        tags: ['Todos'],
+        summary: 'Batch operations',
+        security: [{ bearerAuth: [] }],
         requestBody: {
-          content: { 'application/json': { schema: { type: 'object', properties: { action: { type: 'string', enum: ['complete-all', 'delete-completed'] } } } } },
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: { action: { type: 'string', enum: ['complete-all', 'delete-completed'] } },
+              },
+            },
+          },
         },
         responses: { '200': { description: 'Result' } },
       },
     },
     '/categories': {
-      get: { tags: ['Categories'], summary: 'List categories', security: [{ bearerAuth: [] }], responses: { '200': { description: 'List' } } },
-      post: { tags: ['Categories'], summary: 'Create (admin)', security: [{ bearerAuth: [] }], responses: { '201': { description: 'Created' } } },
+      get: {
+        tags: ['Categories'],
+        summary: 'List categories',
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'List' } },
+      },
+      post: {
+        tags: ['Categories'],
+        summary: 'Create (admin)',
+        security: [{ bearerAuth: [] }],
+        responses: { '201': { description: 'Created' } },
+      },
     },
     '/categories/{id}': {
       patch: {
-        tags: ['Categories'], summary: 'Update (admin)', security: [{ bearerAuth: [] }],
+        tags: ['Categories'],
+        summary: 'Update (admin)',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Updated' } },
       },
       delete: {
-        tags: ['Categories'], summary: 'Delete (admin)', security: [{ bearerAuth: [] }],
+        tags: ['Categories'],
+        summary: 'Delete (admin)',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Deleted' } },
       },
     },
     '/tags': {
-      get: { tags: ['Tags'], summary: 'List tags', security: [{ bearerAuth: [] }], responses: { '200': { description: 'List' } } },
-      post: { tags: ['Tags'], summary: 'Create (admin)', security: [{ bearerAuth: [] }], responses: { '201': { description: 'Created' } } },
+      get: {
+        tags: ['Tags'],
+        summary: 'List tags',
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'List' } },
+      },
+      post: {
+        tags: ['Tags'],
+        summary: 'Create (admin)',
+        security: [{ bearerAuth: [] }],
+        responses: { '201': { description: 'Created' } },
+      },
     },
     '/tags/{id}': {
       patch: {
-        tags: ['Tags'], summary: 'Update (admin)', security: [{ bearerAuth: [] }],
+        tags: ['Tags'],
+        summary: 'Update (admin)',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Updated' } },
       },
       delete: {
-        tags: ['Tags'], summary: 'Delete (admin)', security: [{ bearerAuth: [] }],
+        tags: ['Tags'],
+        summary: 'Delete (admin)',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Deleted' } },
       },
     },
     '/users': {
-      get: { tags: ['Users'], summary: 'List users (admin)', security: [{ bearerAuth: [] }], responses: { '200': { description: 'List' } } },
+      get: {
+        tags: ['Users'],
+        summary: 'List users (admin)',
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'List' } },
+      },
     },
     '/users/{id}': {
       get: {
-        tags: ['Users'], summary: 'Get user (admin)', security: [{ bearerAuth: [] }],
+        tags: ['Users'],
+        summary: 'Get user (admin)',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Detail' } },
       },
       patch: {
-        tags: ['Users'], summary: 'Update role (admin)', security: [{ bearerAuth: [] }],
+        tags: ['Users'],
+        summary: 'Update role (admin)',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Updated' } },
       },
       delete: {
-        tags: ['Users'], summary: 'Delete user (admin)', security: [{ bearerAuth: [] }],
+        tags: ['Users'],
+        summary: 'Delete user (admin)',
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Deleted' } },
       },

@@ -6,7 +6,9 @@ export const users = sqliteTable('users', {
   firebaseUid: text('firebase_uid').notNull().unique(),
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
-  role: text('role', { enum: ['user', 'admin'] }).notNull().default('user'),
+  role: text('role', { enum: ['user', 'admin'] })
+    .notNull()
+    .default('user'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -41,11 +43,15 @@ export const tagsRelations = relations(tags, ({ many }) => ({
 
 export const todos = sqliteTable('todos', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => users.id),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
   title: text('title').notNull(),
   description: text('description'),
   completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
-  priority: text('priority', { enum: ['low', 'medium', 'high'] }).notNull().default('medium'),
+  priority: text('priority', { enum: ['low', 'medium', 'high'] })
+    .notNull()
+    .default('medium'),
   dueDate: text('due_date'),
   categoryId: text('category_id').references(() => categories.id, { onDelete: 'set null' }),
   createdAt: text('created_at').notNull(),
@@ -58,12 +64,20 @@ export const todosRelations = relations(todos, ({ one, many }) => ({
   todoTags: many(todoTags),
 }));
 
-export const todoTags = sqliteTable('todo_tags', {
-  todoId: text('todo_id').notNull().references(() => todos.id, { onDelete: 'cascade' }),
-  tagId: text('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' }),
-}, (t) => ({
-  pk: primaryKey({ columns: [t.todoId, t.tagId] }),
-}));
+export const todoTags = sqliteTable(
+  'todo_tags',
+  {
+    todoId: text('todo_id')
+      .notNull()
+      .references(() => todos.id, { onDelete: 'cascade' }),
+    tagId: text('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.todoId, t.tagId] }),
+  }),
+);
 
 export const todoTagsRelations = relations(todoTags, ({ one }) => ({
   todo: one(todos, { fields: [todoTags.todoId], references: [todos.id] }),
