@@ -15,7 +15,7 @@ ENVIRONMENT = "development"
 [env.production]
 vars = { FIREBASE_PROJECT_ID = "todos-c1b87", ENVIRONMENT = "production" }
 
-[env.production.d1_databases]
+[[env.production.d1_databases]]
 binding = "DB"
 database_name = "todo-db"
 database_id = "b8c3dc95-81fc-4794-a101-deb8d100102c"
