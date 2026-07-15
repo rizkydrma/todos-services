@@ -16,10 +16,17 @@
     "format": "prettier --write 'src/**/*.ts'",
     "format:check": "prettier --check 'src/**/*.ts'",
     "check": "tsc --noEmit && prettier --check 'src/**/*.ts' && eslint 'src/**/*.ts'",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "lint-staged": {
     "src/**/*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "tests/**/*.ts": [
       "prettier --write",
       "eslint --fix"
     ]
@@ -49,6 +56,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.47.0",
+    "vitest": "^3.2.7",
     "wrangler": "^4.111.0"
   }
 }

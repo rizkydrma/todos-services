@@ -7,7 +7,7 @@ on:
 
 jobs:
   check:
-    name: Lint & Type Check
+    name: Lint, Type Check & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +29,9 @@ jobs:
 
       - name: ESLint
         run: npx eslint 'src/**/*.ts'
+
+      - name: Run tests
+        run: npx vitest run
 
   deploy:
     name: Deploy to Cloudflare Workers
