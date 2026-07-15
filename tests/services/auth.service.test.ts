@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../../src/services/auth.service';
-import { createMockUserRepo } from '../setup';
-import { adminUser, regularUser } from '../setup';
+import { adminUser, createMockUserRepo, regularUser } from '../setup';
 
 describe('AuthService', () => {
   const mockRepo = createMockUserRepo();

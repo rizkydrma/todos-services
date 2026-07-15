@@ -1,9 +1,7 @@
 import { vi } from 'vitest';
-import type { IUserRepository } from '../src/repositories/interfaces/user.repo';
-import type { ICategoryRepository } from '../src/repositories/interfaces/category.repo';
-import type { ITagRepository } from '../src/repositories/interfaces/tag.repo';
-import type { ITodoRepository } from '../src/repositories/interfaces/todo.repo';
-import type { User, Category, Tag, Todo } from '../src/types';
+import type { User, Category, Tag, Todo, PaginationParams, PaginatedResult, TodoWithRelations } from '../src/types';
+import type { CreateUserInput, UpdateUserInput } from '../src/repositories/interfaces/user.repo';
+import type { CreateTodoInput, UpdateTodoInput, FindTodosInput } from '../src/repositories/interfaces/todo.repo';
 
 // ── Fixtures ──
 export const adminUser: User = {
@@ -56,49 +54,50 @@ export const sampleTodo: Todo = {
 };
 
 // ── Mock Factory ──
-export function createMockUserRepo(): IUserRepository {
+// No explicit return type — TypeScript infers Mock type, preserving .mockResolvedValue() etc.
+export function createMockUserRepo() {
   return {
-    findById: vi.fn(),
-    findByFirebaseUid: vi.fn(),
-    findByEmail: vi.fn(),
-    findMany: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
+    findById: vi.fn<(id: string) => Promise<User | null>>(),
+    findByFirebaseUid: vi.fn<(firebaseUid: string) => Promise<User | null>>(),
+    findByEmail: vi.fn<(email: string) => Promise<User | null>>(),
+    findMany: vi.fn<(p: PaginationParams & { search?: string }) => Promise<PaginatedResult<User>>>(),
+    create: vi.fn<(data: CreateUserInput) => Promise<User>>(),
+    update: vi.fn<(id: string, data: UpdateUserInput) => Promise<User>>(),
+    delete: vi.fn<(id: string) => Promise<void>>(),
   };
 }
 
-export function createMockCategoryRepo(): ICategoryRepository {
+export function createMockCategoryRepo() {
   return {
-    findById: vi.fn(),
-    findByName: vi.fn(),
-    findMany: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
+    findById: vi.fn<(id: string) => Promise<Category | null>>(),
+    findByName: vi.fn<(name: string) => Promise<Category | null>>(),
+    findMany: vi.fn<() => Promise<Category[]>>(),
+    create: vi.fn<(data: { id: string; name: string; color?: string | null }) => Promise<Category>>(),
+    update: vi.fn<(id: string, data: { name?: string; color?: string | null }) => Promise<Category>>(),
+    delete: vi.fn<(id: string) => Promise<void>>(),
   };
 }
 
-export function createMockTagRepo(): ITagRepository {
+export function createMockTagRepo() {
   return {
-    findById: vi.fn(),
-    findByName: vi.fn(),
-    findMany: vi.fn(),
-    findByIds: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
+    findById: vi.fn<(id: string) => Promise<Tag | null>>(),
+    findByName: vi.fn<(name: string) => Promise<Tag | null>>(),
+    findMany: vi.fn<() => Promise<Tag[]>>(),
+    findByIds: vi.fn<(ids: string[]) => Promise<Tag[]>>(),
+    create: vi.fn<(data: { id: string; name: string; color?: string | null }) => Promise<Tag>>(),
+    update: vi.fn<(id: string, data: { name?: string; color?: string | null }) => Promise<Tag>>(),
+    delete: vi.fn<(id: string) => Promise<void>>(),
   };
 }
 
-export function createMockTodoRepo(): ITodoRepository {
+export function createMockTodoRepo() {
   return {
-    findById: vi.fn(),
-    findByUserId: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    deleteCompletedByUserId: vi.fn(),
-    completeAllByUserId: vi.fn(),
+    findById: vi.fn<(id: string) => Promise<TodoWithRelations | null>>(),
+    findByUserId: vi.fn<(i: FindTodosInput & PaginationParams) => Promise<PaginatedResult<TodoWithRelations>>>(),
+    create: vi.fn<(data: CreateTodoInput) => Promise<Todo>>(),
+    update: vi.fn<(id: string, data: UpdateTodoInput) => Promise<Todo>>(),
+    delete: vi.fn<(id: string) => Promise<void>>(),
+    deleteCompletedByUserId: vi.fn<(userId: string) => Promise<number>>(),
+    completeAllByUserId: vi.fn<(userId: string) => Promise<number>>(),
   };
 }
