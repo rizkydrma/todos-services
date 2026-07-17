@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { AppError } from './errors';
+import { levelForStatus, logError } from './logger';
 
 export function success<T>(c: Context, data: T, meta?: Record<string, unknown>, status: ContentfulStatusCode = 200) {
   const requestId = c.get('requestId') as string;
@@ -21,8 +22,20 @@ export function created<T>(c: Context, data: T) {
 
 export function error(c: Context, err: unknown) {
   const requestId = c.get('requestId') as string;
+  const method = c.req.method;
+  const path = c.req.path;
 
   if (err instanceof AppError) {
+    logError(levelForStatus(err.status), {
+      requestId,
+      method,
+      path,
+      status: err.status,
+      code: err.code,
+      message: err.message,
+      details: err.details,
+    });
+
     return c.json(
       {
         success: false as const,
@@ -33,7 +46,16 @@ export function error(c: Context, err: unknown) {
     );
   }
 
-  console.error(`[${requestId}] Unexpected error:`, err);
+  logError('error', {
+    requestId,
+    method,
+    path,
+    status: 500,
+    code: 'INTERNAL_ERROR',
+    message: err instanceof Error ? err.message : 'Internal server error',
+    stack: err instanceof Error ? err.stack : undefined,
+  });
+
   return c.json(
     {
       success: false as const,

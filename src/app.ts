@@ -1,12 +1,13 @@
+import { apiReference } from '@scalar/hono-api-reference';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { apiReference } from '@scalar/hono-api-reference';
-import { requestIdMiddleware } from './middleware/request-id';
 import { errorHandler } from './middleware/error.middleware';
+import { requestIdMiddleware } from './middleware/request-id';
 import { registerRoutes } from './routes';
+import type { AppEnv } from './types';
 
 export function createApp() {
-  const app = new Hono();
+  const app = new Hono<AppEnv>();
 
   app.use('*', requestIdMiddleware);
   app.use('*', cors());

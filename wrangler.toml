@@ -3,6 +3,11 @@ main = "src/index.ts"
 compatibility_date = "2025-01-10"
 compatibility_flags = ["nodejs_compat"]
 
+# Persist/query logs in dashboard (Workers Observability)
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 [[d1_databases]]
 binding = "DB"
 database_name = "todo-db"

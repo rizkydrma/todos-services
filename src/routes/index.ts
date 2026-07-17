@@ -4,8 +4,9 @@ import { todosRoutes } from './todos.routes';
 import { categoriesRoutes } from './categories.routes';
 import { tagsRoutes } from './tags.routes';
 import { usersRoutes } from './users.routes';
+import type { AppEnv } from '../types';
 
-export function registerRoutes(app: Hono) {
+export function registerRoutes(app: Hono<AppEnv>) {
   app.route('/auth', authRoutes);
   app.route('/todos', todosRoutes);
   app.route('/categories', categoriesRoutes);

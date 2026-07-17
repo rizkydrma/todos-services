@@ -13,6 +13,17 @@ export type TodoWithRelations = Todo & {
   tags: Tag[];
 };
 
+// ── Hono app env ──
+export type AppEnv = {
+  Bindings: {
+    DB: D1Database;
+    FIREBASE_PROJECT_ID: string;
+  };
+  Variables: {
+    requestId: string;
+  };
+};
+
 // ── Auth ──
 export type DecodedToken = {
   iss: string;
