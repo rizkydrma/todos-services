@@ -13,14 +13,17 @@ export interface IUserRepository {
 
 export type CreateUserInput = {
   id: string;
-  firebaseUid: string;
+  firebaseUid?: string | null;
   email: string;
   name: string;
   role: 'user' | 'admin';
+  passwordHash?: string | null;
 };
 
 export type UpdateUserInput = {
   name?: string;
   email?: string;
   role?: 'user' | 'admin';
+  firebaseUid?: string | null;
+  passwordHash?: string | null;
 };

@@ -7,24 +7,50 @@ export type Todo = InferSelectModel<typeof todos>;
 export type Category = InferSelectModel<typeof categories>;
 export type Tag = InferSelectModel<typeof tags>;
 
+/** Safe user for API responses and request context (no password hash). */
+export type PublicUser = {
+  id: string;
+  firebaseUid: string | null;
+  email: string;
+  name: string;
+  role: 'user' | 'admin';
+  createdAt: string;
+  updatedAt: string;
+};
+
+export function toPublicUser(user: User): PublicUser {
+  return {
+    id: user.id,
+    firebaseUid: user.firebaseUid,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
 // ── Extended types (with relations) ──
 export type TodoWithRelations = Todo & {
   category: Category | null;
   tags: Tag[];
 };
 
-// ── Hono app env ──
+// ── Hono app env (single source of truth for routes + middleware) ──
 export type AppEnv = {
   Bindings: {
     DB: D1Database;
     FIREBASE_PROJECT_ID: string;
+    JWT_SECRET: string;
   };
   Variables: {
     requestId: string;
+    /** Set by authMiddleware — never includes passwordHash */
+    user: PublicUser;
   };
 };
 
-// ── Auth ──
+// ── Auth (Firebase / Google idToken decoded) ──
 export type DecodedToken = {
   iss: string;
   aud: string;
@@ -41,6 +67,13 @@ export type DecodedToken = {
   };
   name?: string;
   picture?: string;
+};
+
+export type AuthSession = {
+  user: PublicUser;
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
 };
 
 // ── Pagination ──

@@ -1,57 +1,61 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { registerSchema, loginSchema } from '../types/schemas';
+import { registerSchema, loginSchema, googleLoginSchema, refreshSchema, logoutSchema } from '../types/schemas';
 import { verifyFirebaseToken } from '../lib/firebase';
 import { createDb } from '../db';
 import { D1UserRepository } from '../repositories/d1/user.repo';
+import { D1RefreshTokenRepository } from '../repositories/d1/refresh-token.repo';
 import { AuthService } from '../services/auth.service';
 import { success, created } from '../lib/response';
 import { authMiddleware } from '../middleware/auth.middleware';
+import type { AppEnv } from '../types';
 
-const authRoutes = new Hono<{
-  Bindings: { DB: D1Database; FIREBASE_PROJECT_ID: string };
-}>();
+const authRoutes = new Hono<AppEnv>();
+
+function createAuthService(c: Context<AppEnv>) {
+  const db = createDb(c.env.DB);
+  return new AuthService(new D1UserRepository(db), new D1RefreshTokenRepository(db), c.env.JWT_SECRET);
+}
 
 authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
-  const { token } = c.req.valid('json');
-  const decoded = await verifyFirebaseToken(token, c.env.FIREBASE_PROJECT_ID);
-
-  const db = createDb(c.env.DB);
-  const service = new AuthService(new D1UserRepository(db));
-
-  const user = await service.register({
-    firebaseUid: decoded.sub,
-    email: decoded.email,
-    name: decoded.name || decoded.email.split('@')[0],
-  });
-
-  return created(c, user);
+  const body = c.req.valid('json');
+  const session = await createAuthService(c).register(body);
+  return created(c, session);
 });
 
 authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
-  const { token } = c.req.valid('json');
-  const decoded = await verifyFirebaseToken(token, c.env.FIREBASE_PROJECT_ID);
+  const body = c.req.valid('json');
+  const session = await createAuthService(c).login(body);
+  return success(c, session);
+});
 
-  const db = createDb(c.env.DB);
-  const service = new AuthService(new D1UserRepository(db));
+authRoutes.post('/google', zValidator('json', googleLoginSchema), async (c) => {
+  const { idToken } = c.req.valid('json');
+  const decoded = await verifyFirebaseToken(idToken, c.env.FIREBASE_PROJECT_ID);
+  const session = await createAuthService(c).loginWithGoogle({
+    firebaseUid: decoded.sub,
+    email: decoded.email,
+    name: decoded.name,
+  });
+  return success(c, session);
+});
 
-  const user = await service.login(decoded.sub);
-  return success(c, user);
+authRoutes.post('/refresh', zValidator('json', refreshSchema), async (c) => {
+  const { refreshToken } = c.req.valid('json');
+  const session = await createAuthService(c).refresh(refreshToken);
+  return success(c, session);
+});
+
+authRoutes.post('/logout', zValidator('json', logoutSchema), async (c) => {
+  const { refreshToken } = c.req.valid('json');
+  await createAuthService(c).logout(refreshToken);
+  return success(c, { ok: true });
 });
 
 authRoutes.get('/me', authMiddleware, async (c) => {
-  const db = createDb(c.env.DB);
-  const service = new AuthService(new D1UserRepository(db));
-
-  const authUser = c.get('user');
-  const tokenPayload = c.get('tokenPayload');
-
-  const user = await service.getProfile(authUser.id, {
-    email: tokenPayload.email,
-    name: tokenPayload.name || '',
-  });
-
-  return success(c, user);
+  // user already loaded + stripped by authMiddleware
+  return success(c, c.get('user'));
 });
 
 export { authRoutes };

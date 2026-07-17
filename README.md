@@ -10,7 +10,7 @@ REST API backend untuk aplikasi Todo, dibangun dengan [Hono](https://hono.dev) d
 | Framework      | [Hono](https://hono.dev)                             |
 | Database       | [Cloudflare D1](https://developers.cloudflare.com/d1) |
 | ORM            | [Drizzle ORM](https://orm.drizzle.team)              |
-| Auth           | Firebase Authentication (JWT via Google JWKS)        |
+| Auth           | Email/password (hash di D1) + Google idToken → JWT session |
 | Validation     | [Zod](https://zod.dev)                               |
 | API Docs       | [Scalar](https://scalar.com) (OpenAPI 3.0)           |
 | Testing        | [Vitest](https://vitest.dev)                         |
@@ -62,11 +62,14 @@ src/
 
 ### 🔐 Auth
 
-| Method | Path             | Auth?  | Keterangan                    |
-| ------ | ---------------- | ------ | ----------------------------- |
-| POST   | `/auth/register` | ❌     | Register user baru            |
-| POST   | `/auth/login`    | ❌     | Login (dapatkan user profile) |
-| GET    | `/auth/me`       | ✅     | Lihat profile user saat ini   |
+| Method | Path             | Auth?  | Keterangan                                      |
+| ------ | ---------------- | ------ | ----------------------------------------------- |
+| POST   | `/auth/register` | ❌     | Register email+password → tokens                |
+| POST   | `/auth/login`    | ❌     | Login email+password → tokens                   |
+| POST   | `/auth/google`   | ❌     | Login Google `idToken` → tokens (auto-register) |
+| POST   | `/auth/refresh`  | ❌     | Rotate access/refresh token                     |
+| POST   | `/auth/logout`   | ❌     | Revoke refresh token                            |
+| GET    | `/auth/me`       | ✅     | Profile user saat ini                           |
 
 ### ✅ Todos
 
@@ -126,31 +129,31 @@ src/
 ```
 users ──────────┐
   id (PK)       │
-  firebase_uid  │  1:N
-  email         ├──────────► todos
-  name          │              id (PK)
-  role          │              user_id (FK)
-                │              title
-categories ─────┤              description
-  id (PK)       │  1:N         completed (boolean)
-  name          ├──────────►   priority (low|med|high)
-  color         │              due_date
-                │              category_id (FK, nullable)
-tags ───────────┐              created_at / updated_at
-  id (PK)       │
-  name          │    N:M
-  color         ├──────────► todo_tags
-                             todo_id (FK)
-                             tag_id (FK)
+  email         │  1:N
+  password_hash │──────────► todos
+  firebase_uid  │              id (PK)
+  name, role    │              user_id (FK)
+                │
+refresh_tokens ─┘  (jti, token_hash, expires, revoked)
+
+categories / tags / todo_tags — unchanged
 ```
 
 ## 🔐 Authentication Flow
 
-1. **Frontend** melakukan login dengan Firebase Auth SDK → dapatkan ID token
-2. Kirim token di header `Authorization: Bearer <token>` ke backend
-3. Backend verifikasi token via **Google JWKS** (`jose` library)
-4. User dicocokkan dengan data di tabel `users` (D1)
-5. Jika belum terdaftar, user harus register dulu melalui `POST /auth/register`
+### Email + password
+1. `POST /auth/register` atau `POST /auth/login` dengan `{ name?, email, password }`
+2. Password di-hash (PBKDF2) dan disimpan di D1
+3. Response: `{ user, accessToken, refreshToken, expiresIn }`
+
+### Google
+1. Client dapatkan Firebase/Google `idToken`
+2. `POST /auth/google` `{ idToken }` → verify JWKS → auto-register bila perlu
+3. Response token shape **sama**
+
+### API calls
+1. Header: `Authorization: Bearer <accessToken>`
+2. Access expired → `POST /auth/refresh` `{ refreshToken }`
 
 ## 🛠️ Getting Started
 
@@ -207,10 +210,13 @@ bun run dev
 
 ### Environment Variables
 
-| Variable              | Deskripsi                   |
-| --------------------- | --------------------------- |
-| `FIREBASE_PROJECT_ID` | Firebase project ID untuk JWT verification |
-| `ENVIRONMENT`         | `development` / `production` |
+| Variable              | Deskripsi                                              |
+| --------------------- | ------------------------------------------------------ |
+| `JWT_SECRET`          | Secret HS256 untuk access/refresh JWT (min 32 chars)   |
+| `FIREBASE_PROJECT_ID` | Project ID untuk verify Google `idToken`               |
+| `ENVIRONMENT`         | `development` / `production`                           |
+
+Set `JWT_SECRET` via `.dev.vars` (local) atau `wrangler secret put JWT_SECRET` (prod).
 
 ## 📖 API Documentation
 

@@ -7,8 +7,9 @@ import { UserService } from '../services/users.service';
 import { success } from '../lib/response';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { adminMiddleware } from '../middleware/admin.middleware';
+import type { AppEnv } from '../types';
 
-const usersRoutes = new Hono<{ Bindings: { DB: D1Database } }>();
+const usersRoutes = new Hono<AppEnv>();
 
 usersRoutes.get('/', authMiddleware, adminMiddleware, zValidator('query', userQuerySchema), async (c) => {
   const db = createDb(c.env.DB);

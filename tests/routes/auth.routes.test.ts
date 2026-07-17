@@ -4,7 +4,7 @@ import { createApp } from '../../src/app';
 describe('Auth Routes', () => {
   const app = createApp();
 
-  it('POST /auth/register — returns 400 for empty body (no auth needed)', async () => {
+  it('POST /auth/register — returns 400 for empty body', async () => {
     const res = await app.request('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -13,8 +13,26 @@ describe('Auth Routes', () => {
     expect(res.status).toBe(400);
   });
 
-  it('POST /auth/login — returns 400 for missing token (no auth needed)', async () => {
+  it('POST /auth/login — returns 400 for missing fields', async () => {
     const res = await app.request('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /auth/google — returns 400 for missing idToken', async () => {
+    const res = await app.request('/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /auth/refresh — returns 400 for missing refreshToken', async () => {
+    const res = await app.request('/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -40,7 +58,7 @@ describe('Auth Routes', () => {
     const res = await app.request('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ extraField: 'test' }),
+      body: JSON.stringify({ email: 'not-an-email' }),
     });
     expect(res.status).toBe(400);
   });

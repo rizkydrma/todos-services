@@ -2,11 +2,26 @@ import { z } from 'zod';
 
 // ── Auth ──
 export const registerSchema = z.object({
-  token: z.string().min(1),
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  password: z.string().min(6).max(128),
 });
 
 export const loginSchema = z.object({
-  token: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(1).max(128),
+});
+
+export const googleLoginSchema = z.object({
+  idToken: z.string().min(1),
+});
+
+export const refreshSchema = z.object({
+  refreshToken: z.string().min(1),
+});
+
+export const logoutSchema = z.object({
+  refreshToken: z.string().min(1),
 });
 
 // ── Todo ──

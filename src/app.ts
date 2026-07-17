@@ -33,7 +33,8 @@ const openApiSpec = {
   info: {
     title: 'Todo Service API',
     version: '1.0.0',
-    description: 'Todo service with Firebase Auth. Learning resource for full-stack development.',
+    description:
+      'Todo service with email/password + Google login. Session uses access/refresh JWT. Learning resource for full-stack development.',
   },
   servers: [{ url: 'https://api.todos.com' }],
   components: {
@@ -45,33 +46,114 @@ const openApiSpec = {
     '/auth/register': {
       post: {
         tags: ['Auth'],
-        summary: 'Register new user',
+        summary: 'Register with email and password',
         security: [],
         requestBody: {
           required: true,
           content: {
             'application/json': {
-              schema: { type: 'object', properties: { token: { type: 'string' } }, required: ['token'] },
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  email: { type: 'string' },
+                  password: { type: 'string', minLength: 6 },
+                },
+                required: ['name', 'email', 'password'],
+              },
             },
           },
         },
-        responses: { '201': { description: 'User registered' }, '409': { description: 'Already exists' } },
+        responses: {
+          '201': { description: 'User + accessToken + refreshToken' },
+          '409': { description: 'Email already exists' },
+        },
       },
     },
     '/auth/login': {
       post: {
         tags: ['Auth'],
-        summary: 'Login',
+        summary: 'Login with email and password',
         security: [],
         requestBody: {
           required: true,
           content: {
             'application/json': {
-              schema: { type: 'object', properties: { token: { type: 'string' } }, required: ['token'] },
+              schema: {
+                type: 'object',
+                properties: { email: { type: 'string' }, password: { type: 'string' } },
+                required: ['email', 'password'],
+              },
             },
           },
         },
-        responses: { '200': { description: 'User profile' }, '401': { description: 'Not registered' } },
+        responses: {
+          '200': { description: 'User + accessToken + refreshToken' },
+          '401': { description: 'Invalid credentials' },
+        },
+      },
+    },
+    '/auth/google': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Login with Google idToken',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: { idToken: { type: 'string' } },
+                required: ['idToken'],
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'User + accessToken + refreshToken' },
+          '401': { description: 'Invalid Google token' },
+        },
+      },
+    },
+    '/auth/refresh': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Rotate access/refresh tokens',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: { refreshToken: { type: 'string' } },
+                required: ['refreshToken'],
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'New tokens' }, '401': { description: 'Invalid refresh' } },
+      },
+    },
+    '/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Revoke refresh token',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: { refreshToken: { type: 'string' } },
+                required: ['refreshToken'],
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'Logged out' } },
       },
     },
     '/auth/me': {

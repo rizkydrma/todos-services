@@ -37,7 +37,7 @@ export function logError(level: LogLevel, payload: ErrorLogPayload): void {
   } else if (level === 'warn') {
     console.warn(line);
   } else {
-    console.log(line);
+    console.info(line);
   }
 }
 

@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import type { User, Category, Tag, Todo, PaginationParams, PaginatedResult, TodoWithRelations } from '../src/types';
 import type { CreateUserInput, UpdateUserInput } from '../src/repositories/interfaces/user.repo';
 import type { CreateTodoInput, UpdateTodoInput, FindTodosInput } from '../src/repositories/interfaces/todo.repo';
+import type { CreateRefreshTokenInput, RefreshTokenRecord } from '../src/repositories/interfaces/refresh-token.repo';
 
 // ── Fixtures ──
 export const adminUser: User = {
@@ -10,16 +11,18 @@ export const adminUser: User = {
   email: 'rizky.darmarazak@gmail.com',
   name: 'Rizky Darma',
   role: 'admin',
+  passwordHash: 'pbkdf2$100000$dGVzdA==$dGVzdA==',
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
 export const regularUser: User = {
   id: 'user-uuid-2',
-  firebaseUid: 'firebase-user-uid',
+  firebaseUid: null,
   email: 'user@test.com',
   name: 'Regular User',
   role: 'user',
+  passwordHash: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
@@ -54,7 +57,6 @@ export const sampleTodo: Todo = {
 };
 
 // ── Mock Factory ──
-// No explicit return type — TypeScript infers Mock type, preserving .mockResolvedValue() etc.
 export function createMockUserRepo() {
   return {
     findById: vi.fn<(id: string) => Promise<User | null>>(),
@@ -64,6 +66,15 @@ export function createMockUserRepo() {
     create: vi.fn<(data: CreateUserInput) => Promise<User>>(),
     update: vi.fn<(id: string, data: UpdateUserInput) => Promise<User>>(),
     delete: vi.fn<(id: string) => Promise<void>>(),
+  };
+}
+
+export function createMockRefreshTokenRepo() {
+  return {
+    create: vi.fn<(data: CreateRefreshTokenInput) => Promise<RefreshTokenRecord>>(),
+    findByJti: vi.fn<(jti: string) => Promise<RefreshTokenRecord | null>>(),
+    revokeByJti: vi.fn<(jti: string) => Promise<void>>(),
+    revokeAllForUser: vi.fn<(userId: string) => Promise<void>>(),
   };
 }
 

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   FIREBASE_PROJECT_ID: z.string().min(1),
+  JWT_SECRET: z.string().min(32),
   ENVIRONMENT: z.enum(['development', 'production']).default('development'),
 });
 

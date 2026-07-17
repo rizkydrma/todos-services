@@ -2,15 +2,16 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { createTodoSchema, updateTodoSchema, todoQuerySchema, batchTodoSchema } from '../types/schemas';
 import { createDb } from '../db';
+import type { DbClient } from '../db';
 import { D1TodoRepository } from '../repositories/d1/todo.repo';
 import { D1CategoryRepository } from '../repositories/d1/category.repo';
 import { D1TagRepository } from '../repositories/d1/tag.repo';
 import { TodoService } from '../services/todos.service';
 import { success, created } from '../lib/response';
 import { authMiddleware } from '../middleware/auth.middleware';
-import type { DbClient } from '../db';
+import type { AppEnv } from '../types';
 
-const todosRoutes = new Hono<{ Bindings: { DB: D1Database } }>();
+const todosRoutes = new Hono<AppEnv>();
 
 function createService(db: DbClient) {
   return new TodoService(new D1TodoRepository(db), new D1CategoryRepository(db), new D1TagRepository(db));

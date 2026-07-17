@@ -7,8 +7,9 @@ import { CategoryService } from '../services/categories.service';
 import { success, created } from '../lib/response';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { adminMiddleware } from '../middleware/admin.middleware';
+import type { AppEnv } from '../types';
 
-const categoriesRoutes = new Hono<{ Bindings: { DB: D1Database } }>();
+const categoriesRoutes = new Hono<AppEnv>();
 
 categoriesRoutes.get('/', authMiddleware, async (c) => {
   const db = createDb(c.env.DB);

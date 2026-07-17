@@ -7,8 +7,9 @@ import { TagService } from '../services/tags.service';
 import { success, created } from '../lib/response';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { adminMiddleware } from '../middleware/admin.middleware';
+import type { AppEnv } from '../types';
 
-const tagsRoutes = new Hono<{ Bindings: { DB: D1Database } }>();
+const tagsRoutes = new Hono<AppEnv>();
 
 tagsRoutes.get('/', authMiddleware, async (c) => {
   const db = createDb(c.env.DB);

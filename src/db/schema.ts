@@ -3,18 +3,36 @@ import { relations } from 'drizzle-orm';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
-  firebaseUid: text('firebase_uid').notNull().unique(),
+  firebaseUid: text('firebase_uid').unique(),
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   role: text('role', { enum: ['user', 'admin'] })
     .notNull()
     .default('user'),
+  passwordHash: text('password_hash'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
   todos: many(todos),
+  refreshTokens: many(refreshTokens),
+}));
+
+export const refreshTokens = sqliteTable('refresh_tokens', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  jti: text('jti').notNull().unique(),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: text('expires_at').notNull(),
+  revokedAt: text('revoked_at'),
+  createdAt: text('created_at').notNull(),
+});
+
+export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
+  user: one(users, { fields: [refreshTokens.userId], references: [users.id] }),
 }));
 
 export const categories = sqliteTable('categories', {
