@@ -1,0 +1,1088 @@
+/**
+ * OpenAPI 3.0 spec with full schemas + examples so FE can rely on Scalar /docs.
+ */
+
+const exampleUser = {
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  email: 'budi@yahoo.com',
+  name: 'Budi Santoso',
+  role: 'user' as const,
+  firebaseUid: null as string | null,
+  createdAt: '2026-07-17T10:00:00.000Z',
+  updatedAt: '2026-07-17T10:00:00.000Z',
+};
+
+const exampleCategory = {
+  id: 'cat-1111-1111-1111-111111111111',
+  name: 'Work',
+  color: '#3B82F6',
+  createdAt: '2026-07-01T00:00:00.000Z',
+  updatedAt: '2026-07-01T00:00:00.000Z',
+};
+
+const exampleTag = {
+  id: 'tag-2222-2222-2222-222222222222',
+  name: 'urgent',
+  color: '#EF4444',
+  createdAt: '2026-07-01T00:00:00.000Z',
+  updatedAt: '2026-07-01T00:00:00.000Z',
+};
+
+const exampleTodo = {
+  id: 'todo-3333-3333-3333-333333333333',
+  userId: exampleUser.id,
+  title: 'Ship auth docs',
+  description: 'OpenAPI response examples for FE',
+  completed: false,
+  priority: 'high' as const,
+  dueDate: '2026-07-20T00:00:00.000Z',
+  categoryId: exampleCategory.id,
+  createdAt: '2026-07-17T10:00:00.000Z',
+  updatedAt: '2026-07-17T10:00:00.000Z',
+};
+
+const exampleTodoWithRelations = {
+  ...exampleTodo,
+  category: exampleCategory,
+  tags: [exampleTag],
+};
+
+const exampleSession = {
+  user: exampleUser,
+  accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMCIsInR5cGUiOiJhY2Nlc3MifQ.example',
+  refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMCIsInR5cGUiOiJyZWZyZXNoIn0.example',
+  expiresIn: 900,
+};
+
+const exampleMeta = {
+  page: 1,
+  limit: 20,
+  total: 42,
+  totalPages: 3,
+};
+
+function ok<T>(data: T, meta?: typeof exampleMeta) {
+  return {
+    success: true as const,
+    data,
+    ...(meta ? { meta } : {}),
+    requestId: 'req_abc123',
+  };
+}
+
+function err(code: string, message: string) {
+  return {
+    success: false as const,
+    error: { code, message },
+    requestId: 'req_abc123',
+  };
+}
+
+const jsonContent = (schema: object, example: unknown) => ({
+  content: {
+    'application/json': {
+      schema,
+      example,
+    },
+  },
+});
+
+export const openApiSpec = {
+  openapi: '3.0.3',
+  info: {
+    title: 'Todo Service API',
+    version: '1.0.0',
+    description:
+      'Todo service with email/password + Google login. Session uses access/refresh JWT. Full response schemas for FE clients.',
+  },
+  servers: [
+    { url: 'https://todo-service.rizky-darmarazak.workers.dev', description: 'Production' },
+    { url: 'http://localhost:8787', description: 'Local' },
+  ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Access token from /auth/login, /auth/register, or /auth/google',
+      },
+    },
+    schemas: {
+      PublicUser: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          email: { type: 'string', format: 'email' },
+          name: { type: 'string' },
+          role: { type: 'string', enum: ['user', 'admin'] },
+          firebaseUid: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+        required: ['id', 'email', 'name', 'role', 'firebaseUid', 'createdAt', 'updatedAt'],
+      },
+      AuthSession: {
+        type: 'object',
+        properties: {
+          user: { $ref: '#/components/schemas/PublicUser' },
+          accessToken: { type: 'string' },
+          refreshToken: { type: 'string' },
+          expiresIn: { type: 'integer', example: 900, description: 'Access TTL seconds' },
+        },
+        required: ['user', 'accessToken', 'refreshToken', 'expiresIn'],
+      },
+      Category: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          color: { type: 'string', nullable: true, example: '#3B82F6' },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+        required: ['id', 'name', 'color', 'createdAt', 'updatedAt'],
+      },
+      Tag: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          color: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+        required: ['id', 'name', 'color', 'createdAt', 'updatedAt'],
+      },
+      Todo: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          title: { type: 'string' },
+          description: { type: 'string', nullable: true },
+          completed: { type: 'boolean' },
+          priority: { type: 'string', enum: ['low', 'medium', 'high'] },
+          dueDate: { type: 'string', format: 'date-time', nullable: true },
+          categoryId: { type: 'string', format: 'uuid', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+        required: [
+          'id',
+          'userId',
+          'title',
+          'description',
+          'completed',
+          'priority',
+          'dueDate',
+          'categoryId',
+          'createdAt',
+          'updatedAt',
+        ],
+      },
+      TodoWithRelations: {
+        allOf: [
+          { $ref: '#/components/schemas/Todo' },
+          {
+            type: 'object',
+            properties: {
+              category: { oneOf: [{ $ref: '#/components/schemas/Category' }, { type: 'null' }] },
+              tags: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
+            },
+            required: ['category', 'tags'],
+          },
+        ],
+      },
+      PaginationMeta: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', example: 1 },
+          limit: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 42 },
+          totalPages: { type: 'integer', example: 3 },
+        },
+        required: ['page', 'limit', 'total', 'totalPages'],
+      },
+      ErrorBody: {
+        type: 'object',
+        properties: {
+          code: {
+            type: 'string',
+            enum: [
+              'VALIDATION_ERROR',
+              'UNAUTHORIZED',
+              'FORBIDDEN',
+              'NOT_FOUND',
+              'CONFLICT',
+              'TOO_MANY_REQUESTS',
+              'INTERNAL_ERROR',
+            ],
+          },
+          message: { type: 'string' },
+          details: {},
+        },
+        required: ['code', 'message'],
+      },
+      ErrorResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [false] },
+          error: { $ref: '#/components/schemas/ErrorBody' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'error', 'requestId'],
+      },
+      AuthSessionResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/AuthSession' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      PublicUserResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/PublicUser' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      TodoListResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { type: 'array', items: { $ref: '#/components/schemas/TodoWithRelations' } },
+          meta: { $ref: '#/components/schemas/PaginationMeta' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'meta', 'requestId'],
+      },
+      TodoDetailResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/TodoWithRelations' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      TodoResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/Todo' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      CategoryListResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { type: 'array', items: { $ref: '#/components/schemas/Category' } },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      CategoryResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/Category' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      TagListResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      TagResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/Tag' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      UserListResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { type: 'array', items: { $ref: '#/components/schemas/PublicUser' } },
+          meta: { $ref: '#/components/schemas/PaginationMeta' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'meta', 'requestId'],
+      },
+      BatchResultResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: {
+            type: 'object',
+            properties: { affected: { type: 'integer', example: 5 } },
+            required: ['affected'],
+          },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      DeletedResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: {
+            type: 'object',
+            properties: { deleted: { type: 'boolean', example: true } },
+            required: ['deleted'],
+          },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+    },
+  },
+  paths: {
+    // ── Auth ──
+    '/auth/register': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Register with email and password',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'Budi Santoso' },
+                  email: { type: 'string', format: 'email', example: 'budi@yahoo.com' },
+                  password: { type: 'string', minLength: 6, example: 'rahasia123' },
+                },
+                required: ['name', 'email', 'password'],
+              },
+              example: { name: 'Budi Santoso', email: 'budi@yahoo.com', password: 'rahasia123' },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Registered',
+            ...jsonContent({ $ref: '#/components/schemas/AuthSessionResponse' }, ok(exampleSession)),
+          },
+          '409': {
+            description: 'Email already registered',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('CONFLICT', 'Email already registered')),
+          },
+          '400': {
+            description: 'Validation error',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('VALIDATION_ERROR', 'Validation failed'),
+            ),
+          },
+        },
+      },
+    },
+    '/auth/login': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Login with email and password',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  email: { type: 'string', example: 'budi@yahoo.com' },
+                  password: { type: 'string', example: 'rahasia123' },
+                },
+                required: ['email', 'password'],
+              },
+              example: { email: 'budi@yahoo.com', password: 'rahasia123' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Logged in',
+            ...jsonContent({ $ref: '#/components/schemas/AuthSessionResponse' }, ok(exampleSession)),
+          },
+          '401': {
+            description: 'Invalid credentials',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('UNAUTHORIZED', 'Invalid credentials')),
+          },
+        },
+      },
+    },
+    '/auth/google': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Login with Google idToken',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: { idToken: { type: 'string' } },
+                required: ['idToken'],
+              },
+              example: { idToken: 'eyJhbGciOiJSUzI1NiIsImtpZCI6Ij...google-id-token' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Logged in (auto-register if new)',
+            ...jsonContent(
+              { $ref: '#/components/schemas/AuthSessionResponse' },
+              ok({
+                ...exampleSession,
+                user: { ...exampleUser, email: 'budi@gmail.com', firebaseUid: 'firebase-uid-abc' },
+              }),
+            ),
+          },
+          '401': {
+            description: 'Invalid Google token',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('UNAUTHORIZED', 'Invalid or expired token'),
+            ),
+          },
+        },
+      },
+    },
+    '/auth/refresh': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Rotate access/refresh tokens',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: { refreshToken: { type: 'string' } },
+                required: ['refreshToken'],
+              },
+              example: { refreshToken: exampleSession.refreshToken },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'New token pair',
+            ...jsonContent({ $ref: '#/components/schemas/AuthSessionResponse' }, ok(exampleSession)),
+          },
+          '401': {
+            description: 'Invalid refresh token',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('UNAUTHORIZED', 'Invalid or expired refresh token'),
+            ),
+          },
+        },
+      },
+    },
+    '/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Revoke refresh token',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: { refreshToken: { type: 'string' } },
+                required: ['refreshToken'],
+              },
+              example: { refreshToken: exampleSession.refreshToken },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Logged out',
+            ...jsonContent(
+              {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: {
+                    type: 'object',
+                    properties: { ok: { type: 'boolean' } },
+                  },
+                  requestId: { type: 'string' },
+                },
+              },
+              ok({ ok: true }),
+            ),
+          },
+        },
+      },
+    },
+    '/auth/me': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Current user profile',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Profile',
+            ...jsonContent({ $ref: '#/components/schemas/PublicUserResponse' }, ok(exampleUser)),
+          },
+          '401': {
+            description: 'Unauthorized',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('UNAUTHORIZED', 'Missing or invalid Authorization header'),
+            ),
+          },
+        },
+      },
+    },
+
+    // ── Todos ──
+    '/todos': {
+      get: {
+        tags: ['Todos'],
+        summary: 'List todos',
+        description: 'List current user todos with filter, sort, and pagination.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'status',
+            in: 'query',
+            schema: { type: 'string', enum: ['completed', 'active'] },
+            example: 'active',
+          },
+          {
+            name: 'category',
+            in: 'query',
+            description: 'Category UUID',
+            schema: { type: 'string', format: 'uuid' },
+            example: exampleCategory.id,
+          },
+          {
+            name: 'tag',
+            in: 'query',
+            description: 'Tag UUID',
+            schema: { type: 'string', format: 'uuid' },
+            example: exampleTag.id,
+          },
+          {
+            name: 'priority',
+            in: 'query',
+            schema: { type: 'string', enum: ['low', 'medium', 'high'] },
+            example: 'high',
+          },
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string' },
+            example: 'auth',
+          },
+          {
+            name: 'sort',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['createdAt', '-createdAt', 'dueDate', '-dueDate', 'priority', '-priority'],
+              default: '-createdAt',
+            },
+          },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1, minimum: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 } },
+        ],
+        responses: {
+          '200': {
+            description: 'Paginated todo list',
+            ...jsonContent(
+              { $ref: '#/components/schemas/TodoListResponse' },
+              ok([exampleTodoWithRelations], exampleMeta),
+            ),
+          },
+          '401': {
+            description: 'Unauthorized',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('UNAUTHORIZED', 'Missing or invalid Authorization header'),
+            ),
+          },
+        },
+      },
+      post: {
+        tags: ['Todos'],
+        summary: 'Create todo',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', maxLength: 200, example: 'Ship auth docs' },
+                  description: { type: 'string', maxLength: 2000, example: 'OpenAPI examples' },
+                  priority: { type: 'string', enum: ['low', 'medium', 'high'], default: 'medium' },
+                  dueDate: { type: 'string', format: 'date-time', nullable: true },
+                  categoryId: { type: 'string', format: 'uuid', nullable: true },
+                  tagIds: {
+                    type: 'array',
+                    maxItems: 10,
+                    items: { type: 'string', format: 'uuid' },
+                  },
+                },
+                required: ['title'],
+              },
+              example: {
+                title: 'Ship auth docs',
+                description: 'OpenAPI response examples for FE',
+                priority: 'high',
+                dueDate: '2026-07-20T00:00:00.000Z',
+                categoryId: exampleCategory.id,
+                tagIds: [exampleTag.id],
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Created',
+            ...jsonContent({ $ref: '#/components/schemas/TodoResponse' }, ok(exampleTodo)),
+          },
+          '400': {
+            description: 'Validation error',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('VALIDATION_ERROR', 'Category not found'),
+            ),
+          },
+          '401': {
+            description: 'Unauthorized',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('UNAUTHORIZED', 'Missing or invalid Authorization header'),
+            ),
+          },
+        },
+      },
+    },
+    '/todos/{id}': {
+      get: {
+        tags: ['Todos'],
+        summary: 'Get todo',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            example: exampleTodo.id,
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Todo with category and tags',
+            ...jsonContent({ $ref: '#/components/schemas/TodoDetailResponse' }, ok(exampleTodoWithRelations)),
+          },
+          '403': {
+            description: 'Not owner',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('FORBIDDEN', 'You do not have access to this todo'),
+            ),
+          },
+          '404': {
+            description: 'Not found',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('NOT_FOUND', 'Todo not found')),
+          },
+        },
+      },
+      patch: {
+        tags: ['Todos'],
+        summary: 'Update todo',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                  completed: { type: 'boolean' },
+                  priority: { type: 'string', enum: ['low', 'medium', 'high'] },
+                  dueDate: { type: 'string', format: 'date-time', nullable: true },
+                  categoryId: { type: 'string', format: 'uuid', nullable: true },
+                  tagIds: { type: 'array', items: { type: 'string', format: 'uuid' } },
+                },
+              },
+              example: { completed: true, priority: 'medium' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Updated',
+            ...jsonContent({ $ref: '#/components/schemas/TodoResponse' }, ok({ ...exampleTodo, completed: true })),
+          },
+          '404': {
+            description: 'Not found',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('NOT_FOUND', 'Todo not found')),
+          },
+        },
+      },
+      delete: {
+        tags: ['Todos'],
+        summary: 'Delete todo',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Deleted',
+            ...jsonContent({ $ref: '#/components/schemas/DeletedResponse' }, ok({ deleted: true })),
+          },
+          '404': {
+            description: 'Not found',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('NOT_FOUND', 'Todo not found')),
+          },
+        },
+      },
+    },
+    '/todos/batch': {
+      patch: {
+        tags: ['Todos'],
+        summary: 'Batch operations',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  action: {
+                    type: 'string',
+                    enum: ['complete-all', 'delete-completed'],
+                  },
+                },
+                required: ['action'],
+              },
+              example: { action: 'complete-all' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Batch result',
+            ...jsonContent({ $ref: '#/components/schemas/BatchResultResponse' }, ok({ affected: 5 })),
+          },
+        },
+      },
+    },
+
+    // ── Categories ──
+    '/categories': {
+      get: {
+        tags: ['Categories'],
+        summary: 'List categories',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'All categories',
+            ...jsonContent({ $ref: '#/components/schemas/CategoryListResponse' }, ok([exampleCategory])),
+          },
+        },
+      },
+      post: {
+        tags: ['Categories'],
+        summary: 'Create category (admin)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'Work' },
+                  color: { type: 'string', example: '#3B82F6' },
+                },
+                required: ['name'],
+              },
+              example: { name: 'Work', color: '#3B82F6' },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Created',
+            ...jsonContent({ $ref: '#/components/schemas/CategoryResponse' }, ok(exampleCategory)),
+          },
+          '403': {
+            description: 'Admin only',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('FORBIDDEN', 'Admin access required')),
+          },
+          '409': {
+            description: 'Name exists',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('CONFLICT', 'Category "Work" already exists'),
+            ),
+          },
+        },
+      },
+    },
+    '/categories/{id}': {
+      patch: {
+        tags: ['Categories'],
+        summary: 'Update category (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  color: { type: 'string', nullable: true },
+                },
+              },
+              example: { name: 'Work', color: '#2563EB' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Updated',
+            ...jsonContent(
+              { $ref: '#/components/schemas/CategoryResponse' },
+              ok({ ...exampleCategory, color: '#2563EB' }),
+            ),
+          },
+          '404': {
+            description: 'Not found',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('NOT_FOUND', 'Category not found')),
+          },
+        },
+      },
+      delete: {
+        tags: ['Categories'],
+        summary: 'Delete category (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': {
+            description: 'Deleted',
+            ...jsonContent({ $ref: '#/components/schemas/DeletedResponse' }, ok({ deleted: true })),
+          },
+        },
+      },
+    },
+
+    // ── Tags ──
+    '/tags': {
+      get: {
+        tags: ['Tags'],
+        summary: 'List tags',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'All tags',
+            ...jsonContent({ $ref: '#/components/schemas/TagListResponse' }, ok([exampleTag])),
+          },
+        },
+      },
+      post: {
+        tags: ['Tags'],
+        summary: 'Create tag (admin)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'urgent' },
+                  color: { type: 'string', example: '#EF4444' },
+                },
+                required: ['name'],
+              },
+              example: { name: 'urgent', color: '#EF4444' },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Created',
+            ...jsonContent({ $ref: '#/components/schemas/TagResponse' }, ok(exampleTag)),
+          },
+          '403': {
+            description: 'Admin only',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('FORBIDDEN', 'Admin access required')),
+          },
+        },
+      },
+    },
+    '/tags/{id}': {
+      patch: {
+        tags: ['Tags'],
+        summary: 'Update tag (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  color: { type: 'string', nullable: true },
+                },
+              },
+              example: { color: '#DC2626' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Updated',
+            ...jsonContent({ $ref: '#/components/schemas/TagResponse' }, ok({ ...exampleTag, color: '#DC2626' })),
+          },
+        },
+      },
+      delete: {
+        tags: ['Tags'],
+        summary: 'Delete tag (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': {
+            description: 'Deleted',
+            ...jsonContent({ $ref: '#/components/schemas/DeletedResponse' }, ok({ deleted: true })),
+          },
+        },
+      },
+    },
+
+    // ── Users (admin) ──
+    '/users': {
+      get: {
+        tags: ['Users'],
+        summary: 'List users (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Paginated users (no passwordHash)',
+            ...jsonContent({ $ref: '#/components/schemas/UserListResponse' }, ok([exampleUser], exampleMeta)),
+          },
+          '403': {
+            description: 'Admin only',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('FORBIDDEN', 'Admin access required')),
+          },
+        },
+      },
+    },
+    '/users/{id}': {
+      get: {
+        tags: ['Users'],
+        summary: 'Get user (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': {
+            description: 'User detail',
+            ...jsonContent({ $ref: '#/components/schemas/PublicUserResponse' }, ok(exampleUser)),
+          },
+          '404': {
+            description: 'Not found',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('NOT_FOUND', 'User not found')),
+          },
+        },
+      },
+      patch: {
+        tags: ['Users'],
+        summary: 'Update role (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  role: { type: 'string', enum: ['user', 'admin'] },
+                },
+                required: ['role'],
+              },
+              example: { role: 'admin' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Updated',
+            ...jsonContent({ $ref: '#/components/schemas/PublicUserResponse' }, ok({ ...exampleUser, role: 'admin' })),
+          },
+        },
+      },
+      delete: {
+        tags: ['Users'],
+        summary: 'Delete user (admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': {
+            description: 'Deleted',
+            ...jsonContent({ $ref: '#/components/schemas/DeletedResponse' }, ok({ deleted: true })),
+          },
+        },
+      },
+    },
+  },
+};
