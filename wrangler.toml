@@ -18,4 +18,4 @@ FIREBASE_PROJECT_ID = "todos-c1b87"
 ENVIRONMENT = "development"
 # JWT_SECRET must be set via `wrangler secret put JWT_SECRET` (min 32 chars)
 # For local dev, use .dev.vars:
-# JWT_SECRET=dev-secret-at-least-32-characters-long
+JWT_SECRET="dev-secret-at-least-32-characters-long"
