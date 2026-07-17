@@ -11,26 +11,36 @@ export type ErrorLogPayload = {
   stack?: string;
 };
 
+const MAX_STACK_FRAMES = 8;
+
 /**
  * Structured logs for Cloudflare Workers (wrangler tail + Observability).
- * Logs all client/server failures (any 4xx / 5xx), not only 400 / 500.
+ * Pretty multi-line JSON so terminals stay readable; stack is truncated frames.
  *
  * Filter examples:
  *   wrangler tail --search 'http_error'          # all tracked HTTP errors
- *   wrangler tail --search '"level":"warn"'      # all 4xx
  *   wrangler tail --search '"level":"error"'     # all 5xx
  *   wrangler tail --search 'UNAUTHORIZED'        # specific code
  */
 export function logError(level: LogLevel, payload: ErrorLogPayload): void {
-  const entry = {
+  const { stack, ...rest } = payload;
+
+  const entry: Record<string, unknown> = {
     level,
     type: 'http_error',
     statusClass: statusClass(payload.status),
-    ...payload,
+    ...rest,
     ts: new Date().toISOString(),
   };
 
-  const line = JSON.stringify(entry);
+  if (stack) {
+    entry.stack = formatStack(stack);
+  }
+
+  // Pretty-print: readable in wrangler tail / CF logs without one giant line.
+  const body = JSON.stringify(entry, null, 2);
+  const summary = formatSummary(level, payload);
+  const line = `${summary}\n${body}`;
 
   if (level === 'error') {
     console.error(line);
@@ -39,6 +49,22 @@ export function logError(level: LogLevel, payload: ErrorLogPayload): void {
   } else {
     console.info(line);
   }
+}
+
+/** One-line header so you can scan tail quickly. */
+export function formatSummary(level: LogLevel, payload: ErrorLogPayload): string {
+  const method = payload.method ?? '-';
+  const path = payload.path ?? '-';
+  return `[${level}] ${method} ${path} ${payload.status} ${payload.code}`;
+}
+
+/** Split stack into frames and keep the top ones (drop noise). */
+export function formatStack(stack: string, maxFrames = MAX_STACK_FRAMES): string[] {
+  return stack
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => line.length > 0)
+    .slice(0, maxFrames);
 }
 
 /** Any 5xx → error, any 4xx → warn (401, 403, 404, 409, 429, …). */

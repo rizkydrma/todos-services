@@ -32,12 +32,13 @@ src/
 ├── lib/
 │   ├── errors.ts            # AppError class & HTTP error helpers
 │   ├── firebase.ts          # Firebase JWT verification via Google JWKS
+│   ├── logger.ts            # HTTP error logger (4xx/5xx → wrangler tail)
 │   ├── pagination.ts        # Pagination helpers
 │   └── response.ts          # Standardized API response builders
 ├── middleware/
 │   ├── admin.middleware.ts   # Admin role guard
-│   ├── auth.middleware.ts    # Firebase JWT verification + user lookup
-│   ├── error.middleware.ts   # Global error handler (ZodError & AppError)
+│   ├── auth.middleware.ts    # JWT access verification + user lookup
+│   ├── error.middleware.ts   # Global error handler → HTTP error logs
 │   ├── rate-limiter.ts      # In-memory rate limiter (10 req/60s per IP)
 │   └── request-id.ts        # X-Request-Id header injection
 ├── repositories/
@@ -339,6 +340,19 @@ bun run dev
 | `ENVIRONMENT`         | `development` / `production`                           |
 
 Set `JWT_SECRET` via `.dev.vars` (local) atau `wrangler secret put JWT_SECRET` (prod).
+
+## 📋 Logging (HTTP errors only)
+
+Logger service **khusus error HTTP (4xx / 5xx)** — bukan general app logging.
+
+- Type selalu `http_error` → mudah di-filter di `wrangler tail`
+- **4xx** → `warn`, **5xx** → `error` (+ stack singkat untuk unhandled)
+- Docs lengkap: **[`docs/logger.md`](./docs/logger.md)**
+
+```bash
+npx wrangler tail --search 'http_error'
+npx wrangler tail --search '"level":"error"'   # 5xx saja
+```
 
 ## 📖 API Documentation
 
