@@ -155,6 +155,128 @@ categories / tags / todo_tags — unchanged
 1. Header: `Authorization: Bearer <accessToken>`
 2. Access expired → `POST /auth/refresh` `{ refreshToken }`
 
+### Contoh request / response
+
+#### `POST /auth/register`
+
+**Request**
+```json
+{
+  "name": "Budi Santoso",
+  "email": "budi@yahoo.com",
+  "password": "rahasia123"
+}
+```
+
+**Response `201`**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "budi@yahoo.com",
+      "name": "Budi Santoso",
+      "role": "user",
+      "firebaseUid": null,
+      "createdAt": "2026-07-17T10:00:00.000Z",
+      "updatedAt": "2026-07-17T10:00:00.000Z"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 900
+  },
+  "requestId": "req_abc123"
+}
+```
+
+#### `POST /auth/login`
+
+**Request**
+```json
+{
+  "email": "budi@yahoo.com",
+  "password": "rahasia123"
+}
+```
+
+**Response `200`** — shape sama dengan register (`user` + `accessToken` + `refreshToken` + `expiresIn`).
+
+**Response `401`**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid credentials"
+  },
+  "requestId": "req_abc123"
+}
+```
+
+#### `POST /auth/google`
+
+**Request**
+```json
+{
+  "idToken": "<firebase-or-google-id-token>"
+}
+```
+
+**Response `200`** — shape session sama; `user.firebaseUid` terisi.
+
+#### `POST /auth/refresh`
+
+**Request**
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response `200`** — session tokens baru (refresh lama di-revoke).
+
+#### `POST /auth/logout`
+
+**Request**
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": { "ok": true },
+  "requestId": "req_abc123"
+}
+```
+
+#### `GET /auth/me`
+
+**Header:** `Authorization: Bearer <accessToken>`
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "budi@yahoo.com",
+    "name": "Budi Santoso",
+    "role": "user",
+    "firebaseUid": null,
+    "createdAt": "2026-07-17T10:00:00.000Z",
+    "updatedAt": "2026-07-17T10:00:00.000Z"
+  },
+  "requestId": "req_abc123"
+}
+```
+
+> Contoh yang sama juga tampil di Scalar (`/docs`) via OpenAPI examples.
+
 ## 🛠️ Getting Started
 
 ### Prasyarat

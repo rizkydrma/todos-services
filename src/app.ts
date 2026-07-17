@@ -28,6 +28,35 @@ export function createApp() {
   return app;
 }
 
+/** Example payloads used in OpenAPI / Scalar docs */
+const exampleUser = {
+  id: '550e8400-e29b-41d4-a716-446655440000',
+  email: 'budi@yahoo.com',
+  name: 'Budi Santoso',
+  role: 'user',
+  firebaseUid: null,
+  createdAt: '2026-07-17T10:00:00.000Z',
+  updatedAt: '2026-07-17T10:00:00.000Z',
+};
+
+const exampleSession = {
+  user: exampleUser,
+  accessToken:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJ0eXBlIjoiYWNjZXNzIn0.example',
+  refreshToken:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJ0eXBlIjoicmVmcmVzaCJ9.example',
+  expiresIn: 900,
+};
+
+const exampleError = {
+  success: false,
+  error: {
+    code: 'UNAUTHORIZED',
+    message: 'Invalid credentials',
+  },
+  requestId: 'req_abc123',
+};
+
 const openApiSpec = {
   openapi: '3.0.3',
   info: {
@@ -41,12 +70,74 @@ const openApiSpec = {
     securitySchemes: {
       bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
     },
+    schemas: {
+      PublicUser: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          email: { type: 'string', format: 'email' },
+          name: { type: 'string' },
+          role: { type: 'string', enum: ['user', 'admin'] },
+          firebaseUid: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+        required: ['id', 'email', 'name', 'role', 'createdAt', 'updatedAt'],
+      },
+      AuthSession: {
+        type: 'object',
+        properties: {
+          user: { $ref: '#/components/schemas/PublicUser' },
+          accessToken: { type: 'string', description: 'JWT access token (Bearer)' },
+          refreshToken: { type: 'string', description: 'JWT refresh token' },
+          expiresIn: {
+            type: 'integer',
+            description: 'Access token TTL in seconds',
+            example: 900,
+          },
+        },
+        required: ['user', 'accessToken', 'refreshToken', 'expiresIn'],
+      },
+      AuthSessionResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          data: { $ref: '#/components/schemas/AuthSession' },
+          requestId: { type: 'string' },
+        },
+      },
+      PublicUserResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          data: { $ref: '#/components/schemas/PublicUser' },
+          requestId: { type: 'string' },
+        },
+      },
+      ErrorResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: false },
+          error: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              message: { type: 'string' },
+              details: {},
+            },
+            required: ['code', 'message'],
+          },
+          requestId: { type: 'string' },
+        },
+      },
+    },
   },
   paths: {
     '/auth/register': {
       post: {
         tags: ['Auth'],
         summary: 'Register with email and password',
+        description: 'Creates a user, hashes password into D1, returns session tokens.',
         security: [],
         requestBody: {
           required: true,
@@ -55,18 +146,47 @@ const openApiSpec = {
               schema: {
                 type: 'object',
                 properties: {
-                  name: { type: 'string' },
-                  email: { type: 'string' },
-                  password: { type: 'string', minLength: 6 },
+                  name: { type: 'string', example: 'Budi Santoso' },
+                  email: { type: 'string', format: 'email', example: 'budi@yahoo.com' },
+                  password: { type: 'string', minLength: 6, example: 'rahasia123' },
                 },
                 required: ['name', 'email', 'password'],
+              },
+              example: {
+                name: 'Budi Santoso',
+                email: 'budi@yahoo.com',
+                password: 'rahasia123',
               },
             },
           },
         },
         responses: {
-          '201': { description: 'User + accessToken + refreshToken' },
-          '409': { description: 'Email already exists' },
+          '201': {
+            description: 'Registered',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AuthSessionResponse' },
+                example: {
+                  success: true,
+                  data: exampleSession,
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
+          '409': {
+            description: 'Email already registered',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  success: false,
+                  error: { code: 'CONFLICT', message: 'Email already registered' },
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -81,15 +201,39 @@ const openApiSpec = {
             'application/json': {
               schema: {
                 type: 'object',
-                properties: { email: { type: 'string' }, password: { type: 'string' } },
+                properties: {
+                  email: { type: 'string', example: 'budi@yahoo.com' },
+                  password: { type: 'string', example: 'rahasia123' },
+                },
                 required: ['email', 'password'],
               },
+              example: { email: 'budi@yahoo.com', password: 'rahasia123' },
             },
           },
         },
         responses: {
-          '200': { description: 'User + accessToken + refreshToken' },
-          '401': { description: 'Invalid credentials' },
+          '200': {
+            description: 'Logged in',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AuthSessionResponse' },
+                example: {
+                  success: true,
+                  data: exampleSession,
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Invalid credentials',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: exampleError,
+              },
+            },
+          },
         },
       },
     },
@@ -97,6 +241,7 @@ const openApiSpec = {
       post: {
         tags: ['Auth'],
         summary: 'Login with Google idToken',
+        description: 'Verifies Firebase/Google ID token. Auto-registers if user is new.',
         security: [],
         requestBody: {
           required: true,
@@ -104,15 +249,53 @@ const openApiSpec = {
             'application/json': {
               schema: {
                 type: 'object',
-                properties: { idToken: { type: 'string' } },
+                properties: {
+                  idToken: {
+                    type: 'string',
+                    description: 'Firebase ID token from Google Sign-In',
+                    example: 'eyJhbGciOiJSUzI1NiIsImtpZCI6Ij...google-id-token',
+                  },
+                },
                 required: ['idToken'],
               },
+              example: { idToken: 'eyJhbGciOiJSUzI1NiIsImtpZCI6Ij...google-id-token' },
             },
           },
         },
         responses: {
-          '200': { description: 'User + accessToken + refreshToken' },
-          '401': { description: 'Invalid Google token' },
+          '200': {
+            description: 'Logged in (same shape as email/password)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AuthSessionResponse' },
+                example: {
+                  success: true,
+                  data: {
+                    ...exampleSession,
+                    user: {
+                      ...exampleUser,
+                      email: 'budi@gmail.com',
+                      firebaseUid: 'firebase-uid-abc',
+                    },
+                  },
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Invalid Google token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  success: false,
+                  error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -130,10 +313,38 @@ const openApiSpec = {
                 properties: { refreshToken: { type: 'string' } },
                 required: ['refreshToken'],
               },
+              example: { refreshToken: exampleSession.refreshToken },
             },
           },
         },
-        responses: { '200': { description: 'New tokens' }, '401': { description: 'Invalid refresh' } },
+        responses: {
+          '200': {
+            description: 'New token pair (old refresh revoked)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AuthSessionResponse' },
+                example: {
+                  success: true,
+                  data: exampleSession,
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Invalid or expired refresh token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  success: false,
+                  error: { code: 'UNAUTHORIZED', message: 'Invalid or expired refresh token' },
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
+        },
       },
     },
     '/auth/logout': {
@@ -150,18 +361,73 @@ const openApiSpec = {
                 properties: { refreshToken: { type: 'string' } },
                 required: ['refreshToken'],
               },
+              example: { refreshToken: exampleSession.refreshToken },
             },
           },
         },
-        responses: { '200': { description: 'Logged out' } },
+        responses: {
+          '200': {
+            description: 'Logged out (idempotent)',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    data: {
+                      type: 'object',
+                      properties: { ok: { type: 'boolean' } },
+                    },
+                    requestId: { type: 'string' },
+                  },
+                },
+                example: {
+                  success: true,
+                  data: { ok: true },
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
+        },
       },
     },
     '/auth/me': {
       get: {
         tags: ['Auth'],
-        summary: 'Current user',
+        summary: 'Current user profile',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Profile' } },
+        responses: {
+          '200': {
+            description: 'Profile (no passwordHash)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PublicUserResponse' },
+                example: {
+                  success: true,
+                  data: exampleUser,
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Missing or invalid access token',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                example: {
+                  success: false,
+                  error: {
+                    code: 'UNAUTHORIZED',
+                    message: 'Missing or invalid Authorization header',
+                  },
+                  requestId: 'req_abc123',
+                },
+              },
+            },
+          },
+        },
       },
     },
     '/todos': {
