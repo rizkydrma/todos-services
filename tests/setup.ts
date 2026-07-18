@@ -3,6 +3,10 @@ import type { User, Category, Tag, Todo, PaginationParams, PaginatedResult, Todo
 import type { CreateUserInput, UpdateUserInput } from '../src/repositories/interfaces/user.repo';
 import type { CreateTodoInput, UpdateTodoInput, FindTodosInput } from '../src/repositories/interfaces/todo.repo';
 import type { CreateRefreshTokenInput, RefreshTokenRecord } from '../src/repositories/interfaces/refresh-token.repo';
+import type {
+  CreateChallengeInput,
+  EmailVerificationChallenge,
+} from '../src/repositories/interfaces/email-verification-challenge.repo';
 
 // ── Fixtures ──
 export const adminUser: User = {
@@ -77,6 +81,16 @@ export function createMockRefreshTokenRepo() {
     findByJti: vi.fn<(jti: string) => Promise<RefreshTokenRecord | null>>(),
     revokeByJti: vi.fn<(jti: string) => Promise<void>>(),
     revokeAllForUser: vi.fn<(userId: string) => Promise<void>>(),
+  };
+}
+
+export function createMockChallengeRepo() {
+  return {
+    create: vi.fn<(data: CreateChallengeInput) => Promise<EmailVerificationChallenge>>(),
+    findActiveByUserId: vi.fn<(userId: string) => Promise<EmailVerificationChallenge | null>>(),
+    consumeAllActiveForUser: vi.fn<(userId: string) => Promise<void>>(),
+    incrementAttempts: vi.fn<(id: string) => Promise<EmailVerificationChallenge>>(),
+    consume: vi.fn<(id: string) => Promise<void>>(),
   };
 }
 
