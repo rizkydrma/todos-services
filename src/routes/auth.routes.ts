@@ -6,6 +6,8 @@ import { verifyFirebaseToken } from '../lib/firebase';
 import { createDb } from '../db';
 import { D1UserRepository } from '../repositories/d1/user.repo';
 import { D1RefreshTokenRepository } from '../repositories/d1/refresh-token.repo';
+import { D1EmailVerificationChallengeRepository } from '../repositories/d1/email-verification-challenge.repo';
+import { createEmailSender } from '../lib/email/sender';
 import { AuthService } from '../services/auth.service';
 import { success, created } from '../lib/response';
 import { authMiddleware } from '../middleware/auth.middleware';
@@ -15,13 +17,19 @@ const authRoutes = new Hono<AppEnv>();
 
 function createAuthService(c: Context<AppEnv>) {
   const db = createDb(c.env.DB);
-  return new AuthService(new D1UserRepository(db), new D1RefreshTokenRepository(db), c.env.JWT_SECRET);
+  return new AuthService(
+    new D1UserRepository(db),
+    new D1RefreshTokenRepository(db),
+    new D1EmailVerificationChallengeRepository(db),
+    createEmailSender(c.env),
+    c.env.JWT_SECRET,
+  );
 }
 
 authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
   const body = c.req.valid('json');
-  const session = await createAuthService(c).register(body);
-  return created(c, session);
+  const pending = await createAuthService(c).register(body);
+  return created(c, pending);
 });
 
 authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
@@ -37,6 +45,7 @@ authRoutes.post('/google', zValidator('json', googleLoginSchema), async (c) => {
     firebaseUid: decoded.sub,
     email: decoded.email,
     name: decoded.name,
+    emailVerified: decoded.email_verified,
   });
   return success(c, session);
 });
