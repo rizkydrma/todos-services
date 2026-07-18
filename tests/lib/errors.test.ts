@@ -52,4 +52,57 @@ describe('AppError', () => {
     expect(err.toJSON()).toEqual({ code: 'NOT_FOUND', message: 'Todo not found' });
     expect(err.details).toBeUndefined();
   });
+
+  it('creates EMAIL_NOT_VERIFIED with 403 status', () => {
+    const err = AppError.emailNotVerified();
+    expect(err.code).toBe('EMAIL_NOT_VERIFIED');
+    expect(err.status).toBe(403);
+    expect(err.message).toBe('Email not verified');
+  });
+
+  it('creates INVALID_OTP with 401 status', () => {
+    const err = AppError.invalidOtp();
+    expect(err.code).toBe('INVALID_OTP');
+    expect(err.status).toBe(401);
+    expect(err.message).toBe('Invalid or expired code');
+  });
+
+  it('creates OTP_EXPIRED with 401 status', () => {
+    const err = AppError.otpExpired();
+    expect(err.code).toBe('OTP_EXPIRED');
+    expect(err.status).toBe(401);
+    expect(err.message).toBe('Code expired');
+  });
+
+  it('creates OTP_MAX_ATTEMPTS with 429 status', () => {
+    const err = AppError.otpMaxAttempts();
+    expect(err.code).toBe('OTP_MAX_ATTEMPTS');
+    expect(err.status).toBe(429);
+    expect(err.message).toBe('Too many attempts');
+  });
+
+  it('creates RATE_LIMITED with 429 status', () => {
+    const err = AppError.rateLimited();
+    expect(err.code).toBe('RATE_LIMITED');
+    expect(err.status).toBe(429);
+    expect(err.message).toBe('Too many requests');
+  });
+
+  it('creates EMAIL_REGISTERED_USE_PASSWORD with 409 status', () => {
+    const err = AppError.emailRegisteredUsePassword();
+    expect(err.code).toBe('EMAIL_REGISTERED_USE_PASSWORD');
+    expect(err.status).toBe(409);
+  });
+
+  it('creates IDENTITY_CONFLICT with 409 status', () => {
+    const err = AppError.identityConflict();
+    expect(err.code).toBe('IDENTITY_CONFLICT');
+    expect(err.status).toBe(409);
+  });
+
+  it('creates EMAIL_ALREADY_REGISTERED with 409 status', () => {
+    const err = AppError.emailAlreadyRegistered();
+    expect(err.code).toBe('EMAIL_ALREADY_REGISTERED');
+    expect(err.status).toBe(409);
+  });
 });
