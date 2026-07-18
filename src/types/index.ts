@@ -14,6 +14,7 @@ export type PublicUser = {
   email: string;
   name: string;
   role: 'user' | 'admin';
+  emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -25,10 +26,16 @@ export function toPublicUser(user: User): PublicUser {
     email: user.email,
     name: user.name,
     role: user.role,
+    emailVerified: user.emailVerifiedAt != null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
 }
+
+export type RegisterPendingVerification = {
+  requiresEmailVerification: true;
+  email: string;
+};
 
 // ── Extended types (with relations) ──
 export type TodoWithRelations = Todo & {

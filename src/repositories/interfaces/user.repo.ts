@@ -18,6 +18,7 @@ export type CreateUserInput = {
   name: string;
   role: 'user' | 'admin';
   passwordHash?: string | null;
+  emailVerifiedAt?: string | null;
 };
 
 export type UpdateUserInput = {
@@ -26,4 +27,5 @@ export type UpdateUserInput = {
   role?: 'user' | 'admin';
   firebaseUid?: string | null;
   passwordHash?: string | null;
+  emailVerifiedAt?: string | null;
 };

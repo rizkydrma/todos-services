@@ -10,6 +10,7 @@ export const users = sqliteTable('users', {
     .notNull()
     .default('user'),
   passwordHash: text('password_hash'),
+  emailVerifiedAt: text('email_verified_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -17,6 +18,7 @@ export const users = sqliteTable('users', {
 export const usersRelations = relations(users, ({ many }) => ({
   todos: many(todos),
   refreshTokens: many(refreshTokens),
+  verificationChallenges: many(emailVerificationChallenges),
 }));
 
 export const refreshTokens = sqliteTable('refresh_tokens', {
@@ -33,6 +35,25 @@ export const refreshTokens = sqliteTable('refresh_tokens', {
 
 export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
   user: one(users, { fields: [refreshTokens.userId], references: [users.id] }),
+}));
+
+export const emailVerificationChallenges = sqliteTable('email_verification_challenges', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  codeHash: text('code_hash').notNull(),
+  expiresAt: text('expires_at').notNull(),
+  attemptCount: integer('attempt_count').notNull().default(0),
+  createdAt: text('created_at').notNull(),
+  consumedAt: text('consumed_at'),
+});
+
+export const emailVerificationChallengesRelations = relations(emailVerificationChallenges, ({ one }) => ({
+  user: one(users, {
+    fields: [emailVerificationChallenges.userId],
+    references: [users.id],
+  }),
 }));
 
 export const categories = sqliteTable('categories', {
