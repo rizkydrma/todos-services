@@ -65,9 +65,11 @@ src/
 
 | Method | Path             | Auth?  | Keterangan                                      |
 | ------ | ---------------- | ------ | ----------------------------------------------- |
-| POST   | `/auth/register` | ❌     | Register email+password → tokens                |
-| POST   | `/auth/login`    | ❌     | Login email+password → tokens                   |
-| POST   | `/auth/google`   | ❌     | Login Google `idToken` → tokens (auto-register) |
+| POST   | `/auth/register` | ❌     | Register password → pending verification (no tokens) |
+| POST   | `/auth/verify-email` | ❌ | OTP verify → Auth Session                       |
+| POST   | `/auth/resend-verification` | ❌ | Resend OTP (rate-limited)                    |
+| POST   | `/auth/login`    | ❌     | Login password (403 if email unverified)        |
+| POST   | `/auth/google`   | ❌     | Firebase `idToken` → session (no silent email link) |
 | POST   | `/auth/refresh`  | ❌     | Rotate access/refresh token                     |
 | POST   | `/auth/logout`   | ❌     | Revoke refresh token                            |
 | GET    | `/auth/me`       | ✅     | Profile user saat ini                           |
@@ -133,8 +135,9 @@ users ──────────┐
   email         │  1:N
   password_hash │──────────► todos
   firebase_uid  │              id (PK)
-  name, role    │              user_id (FK)
-                │
+  email_verified_at            user_id (FK)
+  name, role    │
+                ├── email_verification_challenges (OTP hash, expiry, attempts)
 refresh_tokens ─┘  (jti, token_hash, expires, revoked)
 
 categories / tags / todo_tags — unchanged
@@ -142,15 +145,18 @@ categories / tags / todo_tags — unchanged
 
 ## 🔐 Authentication Flow
 
+How-to lengkap: **[`docs/auth.md`](./docs/auth.md)**. Ringkas:
+
 ### Email + password
-1. `POST /auth/register` atau `POST /auth/login` dengan `{ name?, email, password }`
-2. Password di-hash (PBKDF2) dan disimpan di D1
-3. Response: `{ user, accessToken, refreshToken, expiresIn }`
+1. `POST /auth/register` → user unverified + OTP email; **201** `{ requiresEmailVerification, email }` (**no tokens**)
+2. `POST /auth/verify-email` `{ email, code }` → Auth Session
+3. `POST /auth/login` — verified → session; unverified → **403 `EMAIL_NOT_VERIFIED`**
+4. `POST /auth/resend-verification` — rate-limited; generic 200
 
 ### Google
-1. Client dapatkan Firebase/Google `idToken`
-2. `POST /auth/google` `{ idToken }` → verify JWKS → auto-register bila perlu
-3. Response token shape **sama**
+1. Client: Google Sign-In → Firebase exchange → Firebase ID token
+2. `POST /auth/google` `{ idToken }` → JWKS verify; **no silent link by email** (409 if email taken)
+3. New Google users created verified; session shape sama
 
 ### API calls
 1. Header: `Authorization: Bearer <accessToken>`
@@ -169,27 +175,29 @@ categories / tags / todo_tags — unchanged
 }
 ```
 
-**Response `201`**
+**Response `201`** (pending — no tokens)
 ```json
 {
   "success": true,
   "data": {
-    "user": {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "email": "budi@yahoo.com",
-      "name": "Budi Santoso",
-      "role": "user",
-      "firebaseUid": null,
-      "createdAt": "2026-07-17T10:00:00.000Z",
-      "updatedAt": "2026-07-17T10:00:00.000Z"
-    },
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expiresIn": 900
+    "requiresEmailVerification": true,
+    "email": "budi@yahoo.com"
   },
   "requestId": "req_abc123"
 }
 ```
+
+#### `POST /auth/verify-email`
+
+**Request**
+```json
+{
+  "email": "budi@yahoo.com",
+  "code": "123456"
+}
+```
+
+**Response `200`** — Auth Session (`user` + `accessToken` + `refreshToken` + `expiresIn`; `user.emailVerified: true`).
 
 #### `POST /auth/login`
 
@@ -201,7 +209,19 @@ categories / tags / todo_tags — unchanged
 }
 ```
 
-**Response `200`** — shape sama dengan register (`user` + `accessToken` + `refreshToken` + `expiresIn`).
+**Response `200`** — Auth Session (hanya jika email verified).
+
+**Response `403`** (password OK, belum verify)
+```json
+{
+  "success": false,
+  "error": {
+    "code": "EMAIL_NOT_VERIFIED",
+    "message": "Email not verified"
+  },
+  "requestId": "req_abc123"
+}
+```
 
 **Response `401`**
 ```json
@@ -220,11 +240,11 @@ categories / tags / todo_tags — unchanged
 **Request**
 ```json
 {
-  "idToken": "<firebase-or-google-id-token>"
+  "idToken": "<firebase-id-token>"
 }
 ```
 
-**Response `200`** — shape session sama; `user.firebaseUid` terisi.
+**Response `200`** — session; `user.firebaseUid` terisi; `emailVerified: true`.
 
 #### `POST /auth/refresh`
 
@@ -269,6 +289,7 @@ categories / tags / todo_tags — unchanged
     "name": "Budi Santoso",
     "role": "user",
     "firebaseUid": null,
+    "emailVerified": true,
     "createdAt": "2026-07-17T10:00:00.000Z",
     "updatedAt": "2026-07-17T10:00:00.000Z"
   },
@@ -319,9 +340,11 @@ bun run dev
 | `dev`                | Jalankan server development (Wrangler)        |
 | `deploy`             | Deploy ke Cloudflare Workers                  |
 | `db:generate`        | Generate Drizzle migration file               |
-| `db:migrate:local`   | Jalankan migration ke D1 lokal                |
+| `db:migrate:local`   | Jalankan migration ke D1 lokal (incl. auth + email) |
 | `db:migrate:prod`    | Jalankan migration ke D1 production           |
-| `db:seed`            | Seed database dengan data awal                |
+| `db:migrate:email:local` | Migration email verification saja (local)  |
+| `db:migrate:email:prod`  | Migration email verification saja (prod)   |
+| `db:seed`            | Generate INSERT seed (email_verified_at set)  |
 | `db:studio`          | Buka Drizzle Studio (GUI database)            |
 | `test`               | Jalankan test (Vitest)                        |
 | `test:watch`         | Jalankan test dalam watch mode                |
@@ -337,9 +360,19 @@ bun run dev
 | --------------------- | ------------------------------------------------------ |
 | `JWT_SECRET`          | Secret HS256 untuk access/refresh JWT (min 32 chars)   |
 | `FIREBASE_PROJECT_ID` | Project ID untuk verify Google `idToken`               |
+| `EMAIL_PROVIDER`      | `log` (default, OTP di wrangler log) \| `resend`       |
+| `RESEND_API_KEY`      | API key Resend (wajib jika `EMAIL_PROVIDER=resend`)    |
+| `EMAIL_FROM`          | Sender terverifikasi, mis. `Todo <noreply@domain>`     |
 | `ENVIRONMENT`         | `development` / `production`                           |
 
-Set `JWT_SECRET` via `.dev.vars` (local) atau `wrangler secret put JWT_SECRET` (prod).
+Set secrets via `.dev.vars` (local) atau `wrangler secret put` (prod):
+
+```bash
+npx wrangler secret put JWT_SECRET
+npx wrangler secret put RESEND_API_KEY
+# EMAIL_PROVIDER=resend + EMAIL_FROM di wrangler.toml / vars
+npm run db:migrate:email:prod
+```
 
 ## 📋 Logging (HTTP errors only)
 

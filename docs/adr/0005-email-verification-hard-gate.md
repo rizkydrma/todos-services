@@ -1,0 +1,5 @@
+# Password auth hard-gated by email OTP verification
+
+Register dan login password **tidak** mengeluarkan Auth Session sampai email terbukti lewat **OTP 6 digit**. Register membuat User dengan `email_verified_at = null`, menyimpan **verification challenge** (hash OTP, TTL 10 menit, max 5 attempts), dan mengirim kode lewat pluggable **`EmailSender`** (default `LogEmailSender`; production `ResendEmailSender` bila `EMAIL_PROVIDER=resend`). Client menyelesaikan alur lewat `POST /auth/verify-email` (sukses → `issueSession`) atau `POST /auth/resend-verification` (rate-limited). Login password yang sudah benar tapi belum verified → **403 `EMAIL_NOT_VERIFIED`** tanpa token.
+
+**Considered options:** soft gate (session + middleware flag `emailVerified`); magic link; verifikasi opsional hanya untuk fitur sensitif. Ditolak karena soft gate masih memungkinkan pre-hijack email (register email orang lain lalu pakai API), dan magic link menambah deep-link surface di mobile. OTP + hard gate memisahkan **identity proof password** dari **Auth Session** sampai inbox terbukti.

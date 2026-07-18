@@ -5,6 +5,11 @@
 **Author:** Rizky Darma  
 **Scope:** `service` only (FE wiring out of scope)
 
+> **As-built (cara kerja sekarang):** lihat [`service/docs/auth.md`](../../auth.md)  
+> **Client:** [`apps/docs/auth-flow.md`](../../../../apps/docs/auth-flow.md)  
+> **ADR:** [`service/docs/adr/`](../../adr/) · **Glossary:** [`CONTEXT.md`](../../../../CONTEXT.md)  
+> Dokumen ini tetap **design record / history** phase 1 — jangan diganti jadi runbook.
+
 ---
 
 ## 1. Goal
