@@ -49,6 +49,9 @@ export type AppEnv = {
     DB: D1Database;
     FIREBASE_PROJECT_ID: string;
     JWT_SECRET: string;
+    EMAIL_PROVIDER?: string;
+    RESEND_API_KEY?: string;
+    EMAIL_FROM?: string;
   };
   Variables: {
     requestId: string;
