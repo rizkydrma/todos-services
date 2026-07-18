@@ -8,8 +8,14 @@ const exampleUser = {
   name: 'Budi Santoso',
   role: 'user' as const,
   firebaseUid: null as string | null,
+  emailVerified: true,
   createdAt: '2026-07-17T10:00:00.000Z',
   updatedAt: '2026-07-17T10:00:00.000Z',
+};
+
+const examplePendingVerification = {
+  requiresEmailVerification: true as const,
+  email: 'budi@yahoo.com',
 };
 
 const exampleCategory = {
@@ -93,7 +99,7 @@ export const openApiSpec = {
     title: 'Todo Service API',
     version: '1.0.0',
     description:
-      'Todo service with email/password + Google login. Session uses access/refresh JWT. Full response schemas for FE clients.',
+      'Todo service with email/password + Google login. Email/password registration requires OTP verification before session. Session uses access/refresh JWT. Full response schemas for FE clients.',
   },
   servers: [
     { url: 'https://todo-service.rizky-darmarazak.workers.dev', description: 'Production' },
@@ -105,7 +111,7 @@ export const openApiSpec = {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Access token from /auth/login, /auth/register, or /auth/google',
+        description: 'Access token from /auth/login, /auth/verify-email, or /auth/google',
       },
     },
     schemas: {
@@ -117,10 +123,11 @@ export const openApiSpec = {
           name: { type: 'string' },
           role: { type: 'string', enum: ['user', 'admin'] },
           firebaseUid: { type: 'string', nullable: true },
+          emailVerified: { type: 'boolean', description: 'Derived from email_verified_at' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },
-        required: ['id', 'email', 'name', 'role', 'firebaseUid', 'createdAt', 'updatedAt'],
+        required: ['id', 'email', 'name', 'role', 'firebaseUid', 'emailVerified', 'createdAt', 'updatedAt'],
       },
       AuthSession: {
         type: 'object',
@@ -131,6 +138,14 @@ export const openApiSpec = {
           expiresIn: { type: 'integer', example: 900, description: 'Access TTL seconds' },
         },
         required: ['user', 'accessToken', 'refreshToken', 'expiresIn'],
+      },
+      RegisterPendingVerification: {
+        type: 'object',
+        properties: {
+          requiresEmailVerification: { type: 'boolean', enum: [true] },
+          email: { type: 'string', format: 'email' },
+        },
+        required: ['requiresEmailVerification', 'email'],
       },
       Category: {
         type: 'object',
@@ -217,6 +232,14 @@ export const openApiSpec = {
               'CONFLICT',
               'TOO_MANY_REQUESTS',
               'INTERNAL_ERROR',
+              'EMAIL_NOT_VERIFIED',
+              'INVALID_OTP',
+              'OTP_EXPIRED',
+              'OTP_MAX_ATTEMPTS',
+              'RATE_LIMITED',
+              'EMAIL_REGISTERED_USE_PASSWORD',
+              'IDENTITY_CONFLICT',
+              'EMAIL_ALREADY_REGISTERED',
             ],
           },
           message: { type: 'string' },
@@ -238,6 +261,15 @@ export const openApiSpec = {
         properties: {
           success: { type: 'boolean', enum: [true] },
           data: { $ref: '#/components/schemas/AuthSession' },
+          requestId: { type: 'string' },
+        },
+        required: ['success', 'data', 'requestId'],
+      },
+      RegisterPendingVerificationResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', enum: [true] },
+          data: { $ref: '#/components/schemas/RegisterPendingVerification' },
           requestId: { type: 'string' },
         },
         required: ['success', 'data', 'requestId'],
@@ -359,6 +391,8 @@ export const openApiSpec = {
       post: {
         tags: ['Auth'],
         summary: 'Register with email and password',
+        description:
+          'Creates an unverified account and sends a 6-digit OTP email. Does **not** return session tokens — call `/auth/verify-email` after receiving the code.',
         security: [],
         requestBody: {
           required: true,
@@ -379,12 +413,128 @@ export const openApiSpec = {
         },
         responses: {
           '201': {
-            description: 'Registered',
-            ...jsonContent({ $ref: '#/components/schemas/AuthSessionResponse' }, ok(exampleSession)),
+            description: 'Registered — email verification required',
+            ...jsonContent(
+              { $ref: '#/components/schemas/RegisterPendingVerificationResponse' },
+              ok(examplePendingVerification),
+            ),
           },
           '409': {
             description: 'Email already registered',
-            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('CONFLICT', 'Email already registered')),
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('EMAIL_ALREADY_REGISTERED', 'Email already registered'),
+            ),
+          },
+          '400': {
+            description: 'Validation error',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('VALIDATION_ERROR', 'Validation failed'),
+            ),
+          },
+        },
+      },
+    },
+    '/auth/verify-email': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Verify email with OTP code',
+        description: 'Consumes the active verification challenge, marks the user verified, and issues an auth session.',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  email: { type: 'string', format: 'email', example: 'budi@yahoo.com' },
+                  code: {
+                    type: 'string',
+                    pattern: '^\\d{6}$',
+                    example: '123456',
+                    description: '6-digit OTP from email',
+                  },
+                },
+                required: ['email', 'code'],
+              },
+              example: { email: 'budi@yahoo.com', code: '123456' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Email verified — session issued',
+            ...jsonContent({ $ref: '#/components/schemas/AuthSessionResponse' }, ok(exampleSession)),
+          },
+          '401': {
+            description: 'Invalid or expired OTP',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('INVALID_OTP', 'Invalid or expired code'),
+            ),
+          },
+          '429': {
+            description: 'Too many wrong OTP attempts',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('OTP_MAX_ATTEMPTS', 'Too many attempts'),
+            ),
+          },
+          '400': {
+            description: 'Validation error',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('VALIDATION_ERROR', 'Validation failed'),
+            ),
+          },
+        },
+      },
+    },
+    '/auth/resend-verification': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Resend email verification OTP',
+        description:
+          'Invalidates prior challenges and sends a new OTP when the account is unverified. Always returns `{ ok: true }` for unknown/already-verified emails (no enumeration). Rate limited: 60s cooldown, max 5/hour per email.',
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  email: { type: 'string', format: 'email', example: 'budi@yahoo.com' },
+                },
+                required: ['email'],
+              },
+              example: { email: 'budi@yahoo.com' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Accepted (generic success)',
+            ...jsonContent(
+              {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: {
+                    type: 'object',
+                    properties: { ok: { type: 'boolean' } },
+                  },
+                  requestId: { type: 'string' },
+                },
+              },
+              ok({ ok: true }),
+            ),
+          },
+          '429': {
+            description: 'Resend rate limited',
+            ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('RATE_LIMITED', 'Too many requests')),
           },
           '400': {
             description: 'Validation error',
@@ -400,6 +550,7 @@ export const openApiSpec = {
       post: {
         tags: ['Auth'],
         summary: 'Login with email and password',
+        description: 'Requires email to be verified. Unverified accounts get 403 EMAIL_NOT_VERIFIED (no tokens).',
         security: [],
         requestBody: {
           required: true,
@@ -426,6 +577,13 @@ export const openApiSpec = {
             description: 'Invalid credentials',
             ...jsonContent({ $ref: '#/components/schemas/ErrorResponse' }, err('UNAUTHORIZED', 'Invalid credentials')),
           },
+          '403': {
+            description: 'Email not verified',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('EMAIL_NOT_VERIFIED', 'Email not verified'),
+            ),
+          },
         },
       },
     },
@@ -433,6 +591,8 @@ export const openApiSpec = {
       post: {
         tags: ['Auth'],
         summary: 'Login with Google idToken',
+        description:
+          'Requires Firebase `email_verified` claim. Does not auto-link password accounts by email (409 EMAIL_REGISTERED_USE_PASSWORD).',
         security: [],
         requestBody: {
           required: true,
@@ -454,15 +614,27 @@ export const openApiSpec = {
               { $ref: '#/components/schemas/AuthSessionResponse' },
               ok({
                 ...exampleSession,
-                user: { ...exampleUser, email: 'budi@gmail.com', firebaseUid: 'firebase-uid-abc' },
+                user: {
+                  ...exampleUser,
+                  email: 'budi@gmail.com',
+                  firebaseUid: 'firebase-uid-abc',
+                  emailVerified: true,
+                },
               }),
             ),
           },
           '401': {
-            description: 'Invalid Google token',
+            description: 'Invalid Google token or email not verified on Google',
             ...jsonContent(
               { $ref: '#/components/schemas/ErrorResponse' },
               err('UNAUTHORIZED', 'Invalid or expired token'),
+            ),
+          },
+          '409': {
+            description: 'Email already owned by password account or identity conflict',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('EMAIL_REGISTERED_USE_PASSWORD', 'Email already registered; use password login'),
             ),
           },
         },

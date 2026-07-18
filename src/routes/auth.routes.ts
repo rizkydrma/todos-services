@@ -1,7 +1,15 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { registerSchema, loginSchema, googleLoginSchema, refreshSchema, logoutSchema } from '../types/schemas';
+import {
+  registerSchema,
+  loginSchema,
+  googleLoginSchema,
+  refreshSchema,
+  logoutSchema,
+  verifyEmailSchema,
+  resendVerificationSchema,
+} from '../types/schemas';
 import { verifyFirebaseToken } from '../lib/firebase';
 import { createDb } from '../db';
 import { D1UserRepository } from '../repositories/d1/user.repo';
@@ -30,6 +38,18 @@ authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
   const body = c.req.valid('json');
   const pending = await createAuthService(c).register(body);
   return created(c, pending);
+});
+
+authRoutes.post('/verify-email', zValidator('json', verifyEmailSchema), async (c) => {
+  const body = c.req.valid('json');
+  const session = await createAuthService(c).verifyEmail(body.email, body.code);
+  return success(c, session);
+});
+
+authRoutes.post('/resend-verification', zValidator('json', resendVerificationSchema), async (c) => {
+  const body = c.req.valid('json');
+  const result = await createAuthService(c).resendVerification(body.email);
+  return success(c, result);
 });
 
 authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {

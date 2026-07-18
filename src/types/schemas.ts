@@ -24,6 +24,15 @@ export const logoutSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
+export const verifyEmailSchema = z.object({
+  email: z.string().email(),
+  code: z.string().regex(/^\d{6}$/),
+});
+
+export const resendVerificationSchema = z.object({
+  email: z.string().email(),
+});
+
 // ── Todo ──
 export const createTodoSchema = z.object({
   title: z.string().min(1).max(200),

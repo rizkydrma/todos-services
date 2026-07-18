@@ -62,4 +62,40 @@ describe('Auth Routes', () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it('POST /auth/verify-email — returns 400 for empty body', async () => {
+    const res = await app.request('/auth/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /auth/verify-email — returns 400 for non-6-digit code', async () => {
+    const res = await app.request('/auth/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'budi@yahoo.com', code: '12345' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /auth/resend-verification — returns 400 for missing email', async () => {
+    const res = await app.request('/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('POST /auth/resend-verification — returns 400 for invalid email', async () => {
+    const res = await app.request('/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'not-an-email' }),
+    });
+    expect(res.status).toBe(400);
+  });
 });
