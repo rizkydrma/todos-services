@@ -1,3 +1,5 @@
+import { buildVerifyEmailContent } from './templates/verify-email';
+
 export type SendOtpInput = {
   to: string;
   code: string;
@@ -28,6 +30,11 @@ export class ResendEmailSender implements EmailSender {
   ) {}
 
   async sendEmailVerificationOtp(input: SendOtpInput): Promise<void> {
+    const content = buildVerifyEmailContent({
+      code: input.code,
+      expiresInMinutes: input.expiresInMinutes,
+    });
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -37,8 +44,10 @@ export class ResendEmailSender implements EmailSender {
       body: JSON.stringify({
         from: this.from,
         to: [input.to],
-        subject: 'Kode verifikasi Todo',
-        text: `Kode verifikasi Anda: ${input.code}\nBerlaku ${input.expiresInMinutes} menit.\nJika Anda tidak mendaftar, abaikan email ini.`,
+        subject: content.subject,
+        text: content.text,
+        html: content.html,
+        tags: [{ name: 'category', value: 'email_verification' }],
       }),
     });
     if (!res.ok) {
