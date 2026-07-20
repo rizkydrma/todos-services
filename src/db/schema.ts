@@ -11,6 +11,8 @@ export const users = sqliteTable('users', {
     .default('user'),
   passwordHash: text('password_hash'),
   emailVerifiedAt: text('email_verified_at'),
+  /** Active R2 object key; null = no avatar (never seeded from Google picture). Set via PATCH /auth/me after /uploads. */
+  avatarKey: text('avatar_key'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

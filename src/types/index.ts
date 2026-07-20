@@ -1,5 +1,6 @@
 import type { InferSelectModel } from 'drizzle-orm';
 import type { users, todos, categories, tags } from '../db/schema';
+import { publicObjectUrl } from '../lib/r2';
 
 // ── Drizzle inferred types ──
 export type User = InferSelectModel<typeof users>;
@@ -15,11 +16,13 @@ export type PublicUser = {
   name: string;
   role: 'user' | 'admin';
   emailVerified: boolean;
+  /** Resolved public URL from avatar_key; null if no avatar. */
+  avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-export function toPublicUser(user: User): PublicUser {
+export function toPublicUser(user: User, r2PublicUrl?: string): PublicUser {
   return {
     id: user.id,
     firebaseUid: user.firebaseUid,
@@ -27,6 +30,7 @@ export function toPublicUser(user: User): PublicUser {
     name: user.name,
     role: user.role,
     emailVerified: user.emailVerifiedAt != null,
+    avatarUrl: r2PublicUrl ? publicObjectUrl({ R2_PUBLIC_URL: r2PublicUrl }, user.avatarKey) : null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -52,6 +56,12 @@ export type AppEnv = {
     EMAIL_PROVIDER?: string;
     RESEND_API_KEY?: string;
     EMAIL_FROM?: string;
+    /** R2 S3 API (presign + multipart + HEAD/DELETE) — see docs/r2-upload-mechanism.md */
+    R2_ACCOUNT_ID?: string;
+    R2_ACCESS_KEY_ID?: string;
+    R2_SECRET_ACCESS_KEY?: string;
+    R2_BUCKET_NAME?: string;
+    R2_PUBLIC_URL?: string;
   };
   Variables: {
     requestId: string;

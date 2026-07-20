@@ -6,3 +6,5 @@ dist/
 drizzle/
 *.log
 .DS_Store
+
+.agents

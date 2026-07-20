@@ -11,29 +11,26 @@ import type { AppEnv } from '../types';
 
 const usersRoutes = new Hono<AppEnv>();
 
-usersRoutes.get('/', authMiddleware, adminMiddleware, zValidator('query', userQuerySchema), async (c) => {
+function createUserService(c: { env: AppEnv['Bindings'] }) {
   const db = createDb(c.env.DB);
-  const service = new UserService(new D1UserRepository(db));
-  const result = await service.list(c.req.valid('query'));
+  return new UserService(new D1UserRepository(db), c.env.R2_PUBLIC_URL);
+}
+
+usersRoutes.get('/', authMiddleware, adminMiddleware, zValidator('query', userQuerySchema), async (c) => {
+  const result = await createUserService(c).list(c.req.valid('query'));
   return success(c, result.data, result.meta);
 });
 
 usersRoutes.get('/:id', authMiddleware, adminMiddleware, async (c) => {
-  const db = createDb(c.env.DB);
-  const service = new UserService(new D1UserRepository(db));
-  return success(c, await service.getById(c.req.param('id')));
+  return success(c, await createUserService(c).getById(c.req.param('id')));
 });
 
 usersRoutes.patch('/:id', authMiddleware, adminMiddleware, zValidator('json', updateUserSchema), async (c) => {
-  const db = createDb(c.env.DB);
-  const service = new UserService(new D1UserRepository(db));
-  return success(c, await service.updateRole(c.req.param('id'), c.req.valid('json').role));
+  return success(c, await createUserService(c).updateRole(c.req.param('id'), c.req.valid('json').role));
 });
 
 usersRoutes.delete('/:id', authMiddleware, adminMiddleware, async (c) => {
-  const db = createDb(c.env.DB);
-  const service = new UserService(new D1UserRepository(db));
-  await service.delete(c.req.param('id'));
+  await createUserService(c).delete(c.req.param('id'));
   return success(c, { deleted: true });
 });
 

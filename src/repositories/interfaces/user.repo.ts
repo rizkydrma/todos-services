@@ -28,4 +28,5 @@ export type UpdateUserInput = {
   firebaseUid?: string | null;
   passwordHash?: string | null;
   emailVerifiedAt?: string | null;
+  avatarKey?: string | null;
 };

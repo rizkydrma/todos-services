@@ -17,6 +17,7 @@ export const adminUser: User = {
   role: 'admin',
   passwordHash: 'pbkdf2$100000$dGVzdA==$dGVzdA==',
   emailVerifiedAt: null,
+  avatarKey: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
@@ -29,6 +30,7 @@ export const regularUser: User = {
   role: 'user',
   passwordHash: null,
   emailVerifiedAt: null,
+  avatarKey: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };

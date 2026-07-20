@@ -4,10 +4,12 @@ import { todosRoutes } from './todos.routes';
 import { categoriesRoutes } from './categories.routes';
 import { tagsRoutes } from './tags.routes';
 import { usersRoutes } from './users.routes';
+import { uploadsRoutes } from './uploads.routes';
 import type { AppEnv } from '../types';
 
 export function registerRoutes(app: Hono<AppEnv>) {
   app.route('/auth', authRoutes);
+  app.route('/uploads', uploadsRoutes);
   app.route('/todos', todosRoutes);
   app.route('/categories', categoriesRoutes);
   app.route('/tags', tagsRoutes);

@@ -9,6 +9,7 @@ const exampleUser = {
   role: 'user' as const,
   firebaseUid: null as string | null,
   emailVerified: true,
+  avatarUrl: null as string | null,
   createdAt: '2026-07-17T10:00:00.000Z',
   updatedAt: '2026-07-17T10:00:00.000Z',
 };
@@ -124,10 +125,25 @@ export const openApiSpec = {
           role: { type: 'string', enum: ['user', 'admin'] },
           firebaseUid: { type: 'string', nullable: true },
           emailVerified: { type: 'boolean', description: 'Derived from email_verified_at' },
+          avatarUrl: {
+            type: 'string',
+            nullable: true,
+            description: 'Public URL from R2 avatar_key; null if no avatar (never defaulted from Google)',
+          },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
         },
-        required: ['id', 'email', 'name', 'role', 'firebaseUid', 'emailVerified', 'createdAt', 'updatedAt'],
+        required: [
+          'id',
+          'email',
+          'name',
+          'role',
+          'firebaseUid',
+          'emailVerified',
+          'avatarUrl',
+          'createdAt',
+          'updatedAt',
+        ],
       },
       AuthSession: {
         type: 'object',
@@ -727,6 +743,331 @@ export const openApiSpec = {
             ...jsonContent(
               { $ref: '#/components/schemas/ErrorResponse' },
               err('UNAUTHORIZED', 'Missing or invalid Authorization header'),
+            ),
+          },
+        },
+      },
+      patch: {
+        tags: ['Auth'],
+        summary: 'Update profile (name and/or avatarKey)',
+        description:
+          'Set avatar after uploading via POST /uploads/get-single-url (or multipart). Pass avatarKey from the upload response; null clears avatar.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', minLength: 1, maxLength: 100 },
+                  avatarKey: {
+                    type: 'string',
+                    nullable: true,
+                    description: 'R2 object key from /uploads; null clears avatar',
+                  },
+                },
+              },
+              example: {
+                name: 'Budi Updated',
+                avatarKey: 'uploads/1712345678_avatar.png',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Updated profile',
+            ...jsonContent(
+              { $ref: '#/components/schemas/PublicUserResponse' },
+              ok({
+                ...exampleUser,
+                name: 'Budi Updated',
+                avatarUrl: 'https://cdn.example.com/uploads/1712345678_avatar.png',
+              }),
+            ),
+          },
+          '401': {
+            description: 'Unauthorized',
+            ...jsonContent(
+              { $ref: '#/components/schemas/ErrorResponse' },
+              err('UNAUTHORIZED', 'Missing or invalid Authorization header'),
+            ),
+          },
+        },
+      },
+    },
+
+    // ── Uploads (general R2 presign) ──
+    '/uploads/get-single-url': {
+      post: {
+        tags: ['Uploads'],
+        summary: 'Presigned PUT URL for single file (≤ 50MB)',
+        description:
+          'Client PUTs binary to uploadUrl, then may store key/fileUrl on a domain resource (e.g. PATCH /auth/me avatarKey).',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  fileName: { type: 'string' },
+                  fileType: { type: 'string' },
+                  folder: { type: 'string', default: 'uploads' },
+                  fileSize: { type: 'integer' },
+                },
+                required: ['fileName', 'fileType', 'fileSize'],
+              },
+              example: {
+                fileName: 'foto-proyek.jpg',
+                fileType: 'image/jpeg',
+                folder: 'avatars',
+                fileSize: 1048576,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Presigned upload URL',
+            ...jsonContent(
+              {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      uploadUrl: { type: 'string' },
+                      fileUrl: { type: 'string' },
+                      key: { type: 'string' },
+                      expiresIn: { type: 'integer' },
+                    },
+                  },
+                  requestId: { type: 'string' },
+                },
+              },
+              ok({
+                uploadUrl: 'https://bucket.account.r2.cloudflarestorage.com/avatars/…?X-Amz-…',
+                fileUrl: 'https://cdn.example.com/avatars/1712345678_foto-proyek.jpg',
+                key: 'avatars/1712345678_foto-proyek.jpg',
+                expiresIn: 3600,
+              }),
+            ),
+          },
+        },
+      },
+    },
+    '/uploads/init-multipart': {
+      post: {
+        tags: ['Uploads'],
+        summary: 'Start multipart upload (files > 50MB, up to 20GB)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  fileName: { type: 'string' },
+                  fileType: { type: 'string' },
+                  folder: { type: 'string' },
+                  fileSize: { type: 'integer' },
+                },
+                required: ['fileName', 'fileType', 'fileSize'],
+              },
+              example: {
+                fileName: 'video-besar.mp4',
+                fileType: 'video/mp4',
+                folder: 'uploads',
+                fileSize: 524288000,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Multipart session',
+            ...jsonContent(
+              {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      uploadId: { type: 'string' },
+                      key: { type: 'string' },
+                    },
+                  },
+                  requestId: { type: 'string' },
+                },
+              },
+              ok({
+                uploadId: 'YzBmNTZlN2EtYWRjNC00...',
+                key: 'uploads/1712345678_video-besar.mp4',
+              }),
+            ),
+          },
+        },
+      },
+    },
+    '/uploads/get-part-url': {
+      post: {
+        tags: ['Uploads'],
+        summary: 'Presigned URL for one multipart part',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  key: { type: 'string' },
+                  uploadId: { type: 'string' },
+                  partNumber: { type: 'integer' },
+                  partSize: { type: 'integer' },
+                  isLastPart: { type: 'boolean' },
+                },
+                required: ['key', 'uploadId', 'partNumber', 'partSize'],
+              },
+              example: {
+                key: 'uploads/1712345678_video-besar.mp4',
+                uploadId: 'YzBmNTZlN2EtYWRjNC00...',
+                partNumber: 1,
+                partSize: 52428800,
+                isLastPart: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Part upload URL',
+            ...jsonContent(
+              {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      uploadUrl: { type: 'string' },
+                      partNumber: { type: 'integer' },
+                      expiresIn: { type: 'integer' },
+                    },
+                  },
+                  requestId: { type: 'string' },
+                },
+              },
+              ok({
+                uploadUrl: 'https://…presigned-part…',
+                partNumber: 1,
+                expiresIn: 3600,
+              }),
+            ),
+          },
+        },
+      },
+    },
+    '/uploads/complete-upload': {
+      post: {
+        tags: ['Uploads'],
+        summary: 'Complete multipart upload',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  key: { type: 'string' },
+                  uploadId: { type: 'string' },
+                  parts: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        PartNumber: { type: 'integer' },
+                        ETag: { type: 'string' },
+                      },
+                      required: ['PartNumber', 'ETag'],
+                    },
+                  },
+                },
+                required: ['key', 'uploadId', 'parts'],
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Assembled object',
+            ...jsonContent(
+              {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      fileUrl: { type: 'string' },
+                      key: { type: 'string' },
+                    },
+                  },
+                  requestId: { type: 'string' },
+                },
+              },
+              ok({
+                fileUrl: 'https://cdn.example.com/uploads/1712345678_video-besar.mp4',
+                key: 'uploads/1712345678_video-besar.mp4',
+              }),
+            ),
+          },
+        },
+      },
+    },
+    '/uploads/abort-upload': {
+      post: {
+        tags: ['Uploads'],
+        summary: 'Abort multipart upload and clean up parts',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  key: { type: 'string' },
+                  uploadId: { type: 'string' },
+                },
+                required: ['key', 'uploadId'],
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Aborted',
+            ...jsonContent(
+              {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: {
+                    type: 'object',
+                    properties: { message: { type: 'string' } },
+                  },
+                  requestId: { type: 'string' },
+                },
+              },
+              ok({ message: 'Multipart upload aborted successfully.' }),
             ),
           },
         },

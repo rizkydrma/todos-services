@@ -9,6 +9,7 @@ import {
   logoutSchema,
   verifyEmailSchema,
   resendVerificationSchema,
+  updateProfileSchema,
 } from '../types/schemas';
 import { verifyFirebaseToken } from '../lib/firebase';
 import { createDb } from '../db';
@@ -20,8 +21,28 @@ import { AuthService } from '../services/auth.service';
 import { success, created } from '../lib/response';
 import { authMiddleware } from '../middleware/auth.middleware';
 import type { AppEnv } from '../types';
+import type { R2Env } from '../lib/r2';
 
 const authRoutes = new Hono<AppEnv>();
+
+function r2FromEnv(env: AppEnv['Bindings']): R2Env | undefined {
+  if (
+    !env.R2_ACCOUNT_ID ||
+    !env.R2_ACCESS_KEY_ID ||
+    !env.R2_SECRET_ACCESS_KEY ||
+    !env.R2_BUCKET_NAME ||
+    !env.R2_PUBLIC_URL
+  ) {
+    return undefined;
+  }
+  return {
+    R2_ACCOUNT_ID: env.R2_ACCOUNT_ID,
+    R2_ACCESS_KEY_ID: env.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY: env.R2_SECRET_ACCESS_KEY,
+    R2_BUCKET_NAME: env.R2_BUCKET_NAME,
+    R2_PUBLIC_URL: env.R2_PUBLIC_URL,
+  };
+}
 
 function createAuthService(c: Context<AppEnv>) {
   const db = createDb(c.env.DB);
@@ -31,6 +52,8 @@ function createAuthService(c: Context<AppEnv>) {
     new D1EmailVerificationChallengeRepository(db),
     createEmailSender(c.env),
     c.env.JWT_SECRET,
+    new Map(),
+    r2FromEnv(c.env),
   );
 }
 
@@ -85,6 +108,13 @@ authRoutes.post('/logout', zValidator('json', logoutSchema), async (c) => {
 authRoutes.get('/me', authMiddleware, async (c) => {
   // user already loaded + stripped by authMiddleware
   return success(c, c.get('user'));
+});
+
+authRoutes.patch('/me', authMiddleware, zValidator('json', updateProfileSchema), async (c) => {
+  const user = c.get('user');
+  const body = c.req.valid('json');
+  const updated = await createAuthService(c).updateProfile(user.id, body);
+  return success(c, updated);
 });
 
 export { authRoutes };

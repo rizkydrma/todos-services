@@ -56,6 +56,10 @@ describe('CategoryService', () => {
 
   it('deletes existing category', async () => {
     mockRepo.findById.mockResolvedValue(sampleCategory);
-    await expect(service.delete(sampleCategory.id)).resolves.not.toThrow();
+    mockRepo.delete.mockResolvedValue(undefined);
+
+    await service.delete(sampleCategory.id);
+
+    expect(mockRepo.delete).toHaveBeenCalledWith(sampleCategory.id);
   });
 });

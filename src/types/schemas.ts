@@ -90,6 +90,58 @@ export const updateTagSchema = z.object({
   color: z.string().max(7).optional().nullable(),
 });
 
+// ── Profile (self) ──
+export const updateProfileSchema = z
+  .object({
+    name: z.string().min(1).max(100).optional(),
+    /** R2 object key from /uploads; null clears avatar */
+    avatarKey: z.string().min(1).max(512).nullable().optional(),
+  })
+  .refine((v) => v.name !== undefined || v.avatarKey !== undefined, {
+    message: 'At least one of name or avatarKey is required',
+  });
+
+// ── Uploads (general R2 presign) ──
+export const getSingleUrlSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  fileType: z.string().min(1).max(127),
+  folder: z.string().min(1).max(100).optional(),
+  fileSize: z.number().int().positive(),
+});
+
+export const initMultipartSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  fileType: z.string().min(1).max(127),
+  folder: z.string().min(1).max(100).optional(),
+  fileSize: z.number().int().positive(),
+});
+
+export const getPartUrlSchema = z.object({
+  key: z.string().min(1).max(512),
+  uploadId: z.string().min(1).max(512),
+  partNumber: z.number().int().min(1).max(10_000),
+  partSize: z.number().int().positive(),
+  isLastPart: z.boolean().optional(),
+});
+
+export const completeUploadSchema = z.object({
+  key: z.string().min(1).max(512),
+  uploadId: z.string().min(1).max(512),
+  parts: z
+    .array(
+      z.object({
+        PartNumber: z.number().int().min(1).max(10_000),
+        ETag: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+export const abortUploadSchema = z.object({
+  key: z.string().min(1).max(512),
+  uploadId: z.string().min(1).max(512),
+});
+
 // ── User (admin) ──
 export const updateUserSchema = z.object({
   role: z.enum(['user', 'admin']),

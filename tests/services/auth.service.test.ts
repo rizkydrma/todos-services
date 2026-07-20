@@ -13,6 +13,7 @@ import {
 import type { EmailSender } from '../../src/lib/email/sender';
 import type { EmailVerificationChallenge } from '../../src/repositories/interfaces/email-verification-challenge.repo';
 import type { User } from '../../src/types';
+import * as r2 from '../../src/lib/r2';
 
 const JWT_SECRET = 'test-jwt-secret-at-least-32-chars!!';
 const VERIFIED_AT = '2026-01-01T12:00:00.000Z';
@@ -30,11 +31,20 @@ function buildUser(overrides: Partial<User> & Pick<User, 'id' | 'email'>): User 
     role: 'user',
     passwordHash: null,
     emailVerifiedAt: null,
+    avatarKey: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };
 }
+
+const TEST_R2 = {
+  R2_ACCOUNT_ID: 'acct',
+  R2_ACCESS_KEY_ID: 'key',
+  R2_SECRET_ACCESS_KEY: 'secret',
+  R2_BUCKET_NAME: 'todo-avatars',
+  R2_PUBLIC_URL: 'https://cdn.example.com',
+};
 
 function activeChallenge(
   overrides: Partial<EmailVerificationChallenge> & Pick<EmailVerificationChallenge, 'userId' | 'codeHash'>,
@@ -58,7 +68,15 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new AuthService(mockUserRepo, mockRefreshRepo, mockChallengeRepo, mockEmailSender, JWT_SECRET, new Map());
+    service = new AuthService(
+      mockUserRepo,
+      mockRefreshRepo,
+      mockChallengeRepo,
+      mockEmailSender,
+      JWT_SECRET,
+      new Map(),
+      TEST_R2,
+    );
     mockRefreshRepo.create.mockImplementation(async (data) => ({
       ...data,
       revokedAt: null,
@@ -558,18 +576,62 @@ describe('AuthService', () => {
   });
 
   describe('getProfile', () => {
-    it('returns public user without passwordHash', async () => {
+    it('returns public user without passwordHash and null avatar by default', async () => {
       mockUserRepo.findById.mockResolvedValue({ ...adminUser, emailVerifiedAt: VERIFIED_AT });
 
       const result = await service.getProfile(adminUser.id);
       expect(result.email).toBe(adminUser.email);
       expect(result.emailVerified).toBe(true);
+      expect(result.avatarUrl).toBeNull();
       expect(result).not.toHaveProperty('passwordHash');
     });
 
     it('throws NOT_FOUND when missing', async () => {
       mockUserRepo.findById.mockResolvedValue(null);
       await expect(service.getProfile('missing')).rejects.toThrow('User not found');
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('updates name', async () => {
+      const user = buildUser({ id: 'u1', email: 'a@b.com', name: 'Old', emailVerifiedAt: VERIFIED_AT });
+      mockUserRepo.findById.mockResolvedValue(user);
+      mockUserRepo.update.mockResolvedValue({ ...user, name: 'New Name' });
+
+      const result = await service.updateProfile('u1', { name: 'New Name' });
+      expect(mockUserRepo.update).toHaveBeenCalledWith('u1', { name: 'New Name' });
+      expect(result.name).toBe('New Name');
+      expect(result.avatarUrl).toBeNull();
+    });
+
+    it('sets avatarKey after FE upload and returns avatarUrl', async () => {
+      const user = buildUser({ id: 'u1', email: 'a@b.com', emailVerifiedAt: VERIFIED_AT });
+      const key = 'uploads/1712345678_avatar.png';
+      mockUserRepo.findById.mockResolvedValue(user);
+      mockUserRepo.update.mockImplementation(async (_id, data) => ({ ...user, ...data }));
+
+      const result = await service.updateProfile('u1', { avatarKey: key });
+
+      expect(mockUserRepo.update).toHaveBeenCalledWith('u1', { avatarKey: key });
+      expect(result.avatarUrl).toBe(`https://cdn.example.com/${key}`);
+    });
+
+    it('clears avatarKey and best-effort deletes previous object', async () => {
+      const oldKey = 'uploads/old.png';
+      const user = buildUser({
+        id: 'u1',
+        email: 'a@b.com',
+        avatarKey: oldKey,
+      });
+      mockUserRepo.findById.mockResolvedValue(user);
+      mockUserRepo.update.mockImplementation(async (_id, data) => ({ ...user, ...data }));
+      const deleteSpy = vi.spyOn(r2, 'deleteObject').mockResolvedValue(undefined);
+
+      const result = await service.updateProfile('u1', { avatarKey: null });
+
+      expect(result.avatarUrl).toBeNull();
+      expect(mockUserRepo.update).toHaveBeenCalledWith('u1', { avatarKey: null });
+      expect(deleteSpy).toHaveBeenCalledWith(TEST_R2, oldKey);
     });
   });
 });

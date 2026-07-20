@@ -21,7 +21,7 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 
     if (!user) throw AppError.unauthorized('User not found');
 
-    c.set('user', toPublicUser(user));
+    c.set('user', toPublicUser(user, c.env.R2_PUBLIC_URL));
     await next();
   } catch (err) {
     if (err instanceof AppError) throw err;

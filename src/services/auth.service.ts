@@ -14,8 +14,10 @@ import {
   verifyRefreshToken,
 } from '../lib/jwt';
 import { generateOtpCode, hashOtp, verifyOtp, OTP_TTL_MS, OTP_MAX_ATTEMPTS } from '../lib/otp';
+import { deleteObject, type R2Env } from '../lib/r2';
 import type { AuthSession, PublicUser, RegisterPendingVerification, User } from '../types';
 import { toPublicUser } from '../types';
+import type { UpdateUserInput } from '../repositories/interfaces/user.repo';
 
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const RESEND_MAX_PER_HOUR = 5;
@@ -30,6 +32,7 @@ export class AuthService {
     private jwtSecret: string,
     /** In-memory timestamps of resend attempts per email (per isolate). */
     private resendThrottle: Map<string, number[]> = new Map(),
+    private r2?: R2Env,
   ) {}
 
   async register(input: { name: string; email: string; password: string }): Promise<RegisterPendingVerification> {
@@ -214,7 +217,66 @@ export class AuthService {
     if (!user) {
       throw AppError.notFound('User');
     }
-    return toPublicUser(user);
+    return this.toPublic(user);
+  }
+
+  /**
+   * Update profile fields. Avatar is not uploaded here:
+   * FE uploads via /uploads then PATCHes `avatarKey` (or null to clear).
+   */
+  async updateProfile(userId: string, input: { name?: string; avatarKey?: string | null }): Promise<PublicUser> {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw AppError.notFound('User');
+    }
+
+    const patch: UpdateUserInput = {};
+
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (!name) {
+        throw AppError.validation('Name is required');
+      }
+      patch.name = name;
+    }
+
+    if (input.avatarKey !== undefined) {
+      if (input.avatarKey === null) {
+        patch.avatarKey = null;
+      } else {
+        const key = input.avatarKey.trim();
+        if (!key) {
+          throw AppError.validation('avatarKey cannot be empty');
+        }
+        patch.avatarKey = key;
+      }
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return this.toPublic(user);
+    }
+
+    const previousKey = user.avatarKey;
+    const updated = await this.userRepo.update(userId, patch);
+
+    if (input.avatarKey !== undefined && previousKey && previousKey !== patch.avatarKey) {
+      await this.bestEffortDelete(previousKey);
+    }
+
+    return this.toPublic(updated);
+  }
+
+  private toPublic(user: User): PublicUser {
+    return toPublicUser(user, this.r2?.R2_PUBLIC_URL);
+  }
+
+  private async bestEffortDelete(key: string): Promise<void> {
+    if (!this.r2) return;
+    try {
+      await deleteObject(this.r2, key);
+    } catch {
+      // best-effort: DB is source of truth for avatar_key
+    }
   }
 
   private assertResendAllowed(email: string): void {
@@ -269,7 +331,7 @@ export class AuthService {
     });
 
     return {
-      user: toPublicUser(user),
+      user: this.toPublic(user),
       accessToken,
       refreshToken,
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,

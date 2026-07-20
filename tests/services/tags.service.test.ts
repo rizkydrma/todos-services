@@ -49,6 +49,10 @@ describe('TagService', () => {
 
   it('deletes existing tag', async () => {
     mockRepo.findById.mockResolvedValue(sampleTag);
-    await expect(service.delete(sampleTag.id)).resolves.not.toThrow();
+    mockRepo.delete.mockResolvedValue(undefined);
+
+    await service.delete(sampleTag.id);
+
+    expect(mockRepo.delete).toHaveBeenCalledWith(sampleTag.id);
   });
 });
