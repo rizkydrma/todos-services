@@ -4,8 +4,8 @@ Dokumentasi singkat supaya tidak lupa: **logger service ini khusus untuk error H
 
 | | |
 |---|---|
-| **File** | `src/lib/logger.ts` |
-| **Dipakai dari** | `src/middleware/error.middleware.ts`, `src/lib/response.ts` (`error()`) |
+| **File** | `src/platform/observability/http-error-logger.ts` |
+| **Dipakai dari** | `src/platform/http/error-handler.ts`, `src/platform/http/envelope.ts` (`error()`) |
 | **Output** | `console.warn` / `console.error` → **wrangler tail** + **Cloudflare Workers Observability** |
 | **Type log** | selalu `"type": "http_error"` |
 
@@ -36,8 +36,7 @@ Request gagal
     → wrangler tail / CF dashboard
 ```
 
-Hampir semua error route lewat **global** `errorHandler` di `app.onError`.  
-Helper `error()` di `response.ts` juga memanggil logger yang sama (kalau masih dipakai di route).
+Hampir semua error route lewat **global** `errorHandler` di `app.onError` (`platform/http/error-handler.ts`).
 
 ---
 
@@ -233,10 +232,10 @@ Untuk itu, pola terpisah (type berbeda, atau tool lain). Jangan ubah `type: 'htt
 | File | Peran |
 |------|--------|
 | `src/lib/logger.ts` | `logError`, `levelForStatus`, format summary/stack |
-| `src/middleware/error.middleware.ts` | Global handler → log + JSON error response |
+| `src/platform/http/error-handler.ts` | Global handler → log + JSON error response |
 | `src/lib/response.ts` | `error()` helper (log + response) |
 | `src/lib/errors.ts` | `AppError` + status/code map |
-| `src/middleware/request-id.ts` | Generate / propagate `requestId` |
+| `src/platform/http/request-id.ts` | Generate / propagate `requestId` |
 | `tests/lib/logger.test.ts` | Unit test format & level |
 
 ---

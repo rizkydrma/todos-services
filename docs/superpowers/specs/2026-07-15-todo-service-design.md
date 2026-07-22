@@ -1,3 +1,5 @@
+> **HISTORICAL** — design/plan trail. Path & layout di dokumen ini bisa usang. Kode sekarang: `docs/architecture.md`.
+
 # Todo Service — Design Spec
 
 **Date:** 2026-07-15  

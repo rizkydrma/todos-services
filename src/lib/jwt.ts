@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
-import { AppError } from './errors';
+import { AppError } from '../platform/errors/app-error';
 import { bytesToBase64 } from './encoding';
 
 export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;

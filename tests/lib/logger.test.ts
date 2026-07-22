@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { formatStack, formatSummary, levelForStatus, logError, statusClass } from '../../src/lib/logger';
+import {
+  formatStack,
+  formatSummary,
+  levelForStatus,
+  logError,
+  statusClass,
+} from '../../src/platform/observability/http-error-logger';
 
 describe('levelForStatus', () => {
   it('maps any 5xx to error, any 4xx to warn, else info', () => {

@@ -6,11 +6,8 @@ Audience: onboarding full-team. Narasi Indonesia; identifier & path API tetap En
 | Dokumen terkait | Peran |
 |-----------------|--------|
 | **Dokumen ini** | Cara kerja backend sekarang (diagram, endpoint, JWT, DB) |
-| [`docs/superpowers/specs/2026-07-17-auth-jwt-session-design.md`](./superpowers/specs/2026-07-17-auth-jwt-session-design.md) | Design record / history keputusan phase 1 (JWT session) |
-| [`docs/superpowers/specs/2026-07-18-email-verification-design.md`](./superpowers/specs/2026-07-18-email-verification-design.md) | Design email verification (hard gate + OTP) |
-| [`docs/adr/`](./adr/) | ADR 0001–0006 (mengapa bentuknya seperti ini) |
-| [`../../CONTEXT.md`](../../CONTEXT.md) | Glossary bahasa domain |
-| [`../../apps/docs/auth-flow.md`](../../apps/docs/auth-flow.md) | How-it-works **client** (mirror spine) |
+| [`architecture.md`](./architecture.md) | Pola modular / di mana kode auth hidup |
+| [`adr/`](./adr/) | ADR 0001–0006 (mengapa) |
 | [Scalar OpenAPI — tag auth](https://todo-service.rizky-darmarazak.workers.dev/docs#tag/auth) | Kontrak live |
 
 Terakhir diselaraskan dengan kode: **Juli 2026**.
@@ -555,8 +552,8 @@ Password storage: `pbkdf2$iterations$saltB64$hashB64`, iterations **100_000**, [
 9. Google requires IdP `email_verified`.  
 10. Access pendek; refresh **rotate + revoke**.  
 11. Protected API **hanya** access JWT service.  
-12. Rate limiter middleware existing (jangan spam login).  
-13. `JWT_SECRET` min 32 chars (env validation).  
+12. Resend OTP di-throttle per isolate (cooldown + max/hour).  
+13. `JWT_SECRET` min 32 chars.  
 14. Timing-safe OTP compare.
 
 ---
@@ -564,23 +561,20 @@ Password storage: `pbkdf2$iterations$saltB64$hashB64`, iterations **100_000**, [
 ## 9. Peta file (service)
 
 ```text
-service/src/
-├── routes/auth.routes.ts          # HTTP endpoints + EmailSender wire-up
-├── services/auth.service.ts       # register, verify, resend, login, google, refresh, logout, me
-├── middleware/auth.middleware.ts  # Bearer access → Public User
-├── middleware/admin.middleware.ts # role admin (jika dipakai route)
-├── lib/jwt.ts                     # sign/verify access & refresh
-├── lib/password.ts                # PBKDF2 hash/verify
-├── lib/otp.ts                     # generate / hash / verify OTP
-├── lib/email/sender.ts            # EmailSender: log + Resend
-├── lib/firebase.ts                # verify Firebase ID token only
-├── db/schema.ts                   # users, refresh_tokens, email_verification_challenges
-├── db/seed.ts                     # seed INSERT (email_verified_at set — exception)
-├── repositories/d1/user.repo.ts
-├── repositories/d1/refresh-token.repo.ts
-├── repositories/d1/email-verification-challenge.repo.ts
-└── types/schemas.ts               # Zod body auth (incl. verify/resend)
+src/
+├── app/container.ts                 # wire auth deps + use cases
+├── modules/auth/
+│   ├── application/                 # use cases (register, login, verify, …)
+│   ├── infrastructure/              # D1 repos, JwtTokenService, …
+│   └── http/routes.ts               # HTTP endpoints
+├── platform/auth/require-auth.ts    # Bearer → resolveAccessUser
+├── platform/auth/require-admin.ts
+├── lib/jwt.ts · password.ts · otp.ts · firebase.ts · email/
+├── db/schema.ts · seed.ts
+└── types/schemas.ts                 # Zod body auth
 ```
+
+Arsitektur penuh: [`architecture.md`](./architecture.md).
 
 ---
 

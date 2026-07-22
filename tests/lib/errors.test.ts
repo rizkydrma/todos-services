@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AppError } from '../../src/lib/errors';
+import { AppError } from '../../src/platform/errors/app-error';
 
 describe('AppError', () => {
   it('creates VALIDATION_ERROR with 400 status', () => {

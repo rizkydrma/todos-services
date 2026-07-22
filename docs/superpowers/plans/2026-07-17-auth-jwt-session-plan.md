@@ -1,3 +1,5 @@
+> **HISTORICAL** — design/plan trail. Path & layout di dokumen ini bisa usang. Kode sekarang: `docs/architecture.md`.
+
 # Auth JWT Session + Password in D1 — Implementation Plan
 
 > **For agentic workers:** Implement task-by-task. Checkboxes for tracking.

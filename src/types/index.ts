@@ -1,4 +1,5 @@
 import type { InferSelectModel } from 'drizzle-orm';
+import type { AppContainer } from '../app/container';
 import type { users, todos, categories, tags } from '../db/schema';
 import { publicObjectUrl } from '../lib/r2';
 
@@ -67,6 +68,8 @@ export type AppEnv = {
     requestId: string;
     /** Set by authMiddleware — never includes passwordHash */
     user: PublicUser;
+    /** Composition root — set per request in create-app */
+    container: AppContainer;
   };
 };
 

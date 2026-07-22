@@ -1,3 +1,5 @@
+> **HISTORICAL** — design/plan trail. Path & layout di dokumen ini bisa usang. Kode sekarang: `docs/architecture.md`.
+
 # Unit & Integration Tests — Implementation Plan
 
 > **For agentic workers:** Execute tasks using subagent-driven-development (inline) or executing-plans. Steps use checkbox (`- [ ]`) syntax.

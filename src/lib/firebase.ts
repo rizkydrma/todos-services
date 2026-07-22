@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { AppError } from './errors';
+import { AppError } from '../platform/errors/app-error';
 import type { DecodedToken } from '../types';
 
 const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';

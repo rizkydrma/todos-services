@@ -1,12 +1,9 @@
 import { vi } from 'vitest';
 import type { User, Category, Tag, Todo, PaginationParams, PaginatedResult, TodoWithRelations } from '../src/types';
-import type { CreateUserInput, UpdateUserInput } from '../src/repositories/interfaces/user.repo';
-import type { CreateTodoInput, UpdateTodoInput, FindTodosInput } from '../src/repositories/interfaces/todo.repo';
-import type { CreateRefreshTokenInput, RefreshTokenRecord } from '../src/repositories/interfaces/refresh-token.repo';
-import type {
-  CreateChallengeInput,
-  EmailVerificationChallenge,
-} from '../src/repositories/interfaces/email-verification-challenge.repo';
+import type { CreateUserInput, UpdateUserInput } from '../src/modules/auth';
+import type { CreateTodoInput, UpdateTodoInput, FindTodosInput } from '../src/modules/todos';
+import type { CreateRefreshTokenInput, RefreshTokenRecord } from '../src/modules/auth';
+import type { CreateChallengeInput, EmailVerificationChallenge } from '../src/modules/auth';
 
 // ── Fixtures ──
 export const adminUser: User = {

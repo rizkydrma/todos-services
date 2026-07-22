@@ -21,43 +21,33 @@ REST API backend untuk aplikasi Todo, dibangun dengan [Hono](https://hono.dev) d
 
 ```
 src/
-├── app.ts                   # App factory (middleware, routes, error handler)
-├── index.ts                 # Entry point (Cloudflare Worker)
-├── config/
-│   └── env.ts               # Environment variable validation
-├── db/
-│   ├── index.ts             # D1 client factory
-│   ├── schema.ts            # Drizzle schema (users, todos, categories, tags, todo_tags)
-│   └── seed.ts              # Database seeder
-├── lib/
-│   ├── errors.ts            # AppError class & HTTP error helpers
-│   ├── firebase.ts          # Firebase JWT verification via Google JWKS
-│   ├── logger.ts            # HTTP error logger (4xx/5xx → wrangler tail)
-│   ├── pagination.ts        # Pagination helpers
-│   └── response.ts          # Standardized API response builders
-├── middleware/
-│   ├── admin.middleware.ts   # Admin role guard
-│   ├── auth.middleware.ts    # JWT access verification + user lookup
-│   ├── error.middleware.ts   # Global error handler → HTTP error logs
-│   ├── rate-limiter.ts      # In-memory rate limiter (10 req/60s per IP)
-│   └── request-id.ts        # X-Request-Id header injection
-├── repositories/
-│   ├── index.ts             # Repository factory
-│   ├── interfaces/          # Repository contracts
-│   └── d1/                  # D1 concrete implementations
-├── routes/
-│   ├── index.ts             # Route registration
-│   ├── auth.routes.ts
-│   ├── todos.routes.ts
-│   ├── categories.routes.ts
-│   ├── tags.routes.ts
-│   └── users.routes.ts
-├── services/                # Business logic layer
-├── types/
-│   ├── index.ts             # Shared types (User, Todo, Pagination, Response, etc.)
-│   └── schemas.ts           # Zod validation schemas
-└── tests/                   # Vitest test files
+├── index.ts                 # Worker entry re-export
+├── app/
+│   ├── worker.ts            # export default app
+│   ├── create-app.ts        # Hono factory (middleware, routes, onError)
+│   └── container.ts         # Composition root — wire modules
+├── platform/                # AppError, envelope, auth middleware, logger
+├── modules/                 # Feature modules (auth, todos, categories, tags, uploads, users)
+│   └── <feature>/
+│       ├── domain/
+│       ├── application/     # use cases + ports
+│       ├── infrastructure/  # D1 / R2 adapters
+│       ├── http/            # routes + zod
+│       ├── container.ts
+│       └── index.ts         # public API
+├── lib/                     # jwt, password, otp, firebase, r2, email, pagination
+├── db/                      # Drizzle schema, client, seed
+├── routes/index.ts          # Mount module routers
+├── types/                   # Shared types + Zod schemas
+└── openapi/spec.ts
+
+tests/
+├── modules/                 # Use case unit tests (mock ports)
+├── routes/                  # HTTP smoke
+└── lib/
 ```
+
+Detail: **[`docs/architecture.md`](./docs/architecture.md)** · skeleton: **[`docs/architecture/module-skeleton.md`](./docs/architecture/module-skeleton.md)** · fitur baru: **[`docs/architecture/adding-a-feature.md`](./docs/architecture/adding-a-feature.md)**
 
 ## 🚀 API Endpoints
 
@@ -430,18 +420,31 @@ Semua respons API mengikuti format ini:
 }
 ```
 
-## 🏗️ Architecture Pattern
+## 🏗️ Architecture
 
-Proyek ini mengikuti **3-layer architecture**:
+**Modular Application Architecture** (modular monolith):
 
 ```
-Routes (Controller)  →  Services (Business Logic)  →  Repositories (Data Access)
-       ↑                                                    │
-       └── Hono routing + middleware                        │
-                      (auth, admin, rate-limit, error)      │
-                                                      D1 Database
+HTTP → modules/*/http → modules/*/application (use cases)
+                      → modules/*/infrastructure (D1, R2, …)
+         ↑
+  platform/ + app/container.ts (composition root)
 ```
 
-- **Routes**: Menangani HTTP request/response, validasi input, middleware chain
-- **Services**: Business logic, koordinasi antar repository
-- **Repositories**: Data access layer — menggunakan interface pattern agar mudah diganti (saat ini implementasi D1)
+| Layer | Tanggung jawab |
+|-------|----------------|
+| `modules/*/http` | Routing, Zod, middleware chain, response envelope |
+| `modules/*/application` | Business rules / use cases (ports only) |
+| `modules/*/infrastructure` | Drizzle/D1, R2, JWT adapters |
+| `app/container.ts` | Satu tempat wire dependency |
+| `platform/` | AppError, auth guards, logging, request-id |
+
+Dokumen:
+
+| File | Isi |
+|------|-----|
+| [`docs/architecture.md`](./docs/architecture.md) | As-built architecture |
+| [`docs/architecture/module-skeleton.md`](./docs/architecture/module-skeleton.md) | Template folder module |
+| [`docs/architecture/adding-a-feature.md`](./docs/architecture/adding-a-feature.md) | Alur fitur: table → endpoint → FE |
+| [`docs/auth.md`](./docs/auth.md) | Auth flows |
+| [`docs/adr/`](./docs/adr/) | Keputusan desain |

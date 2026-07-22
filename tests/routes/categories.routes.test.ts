@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createApp } from '../../src/app';
+import { createApp } from '../../src/app/create-app';
 
 describe('Categories Routes', () => {
   const app = createApp();
